@@ -51,7 +51,8 @@
     AU.setTheme(m.id); document.body.style.background = m.bg;
   }
   const INTRO = 1.2;                                            // (before 3, 2, 1: the character and her 會贏喔！)
-  function startCountdown() { newRun(); setMode('count'); G.countOff = INTRO; AU.music(null); }
+  // a map with something heavy to get ready first (數讀房市's website) shows the loading screen until it is: the first time only
+  function startCountdown() { newRun(); AU.music(null); if (MAP().prep && MAP().prep(true) < 1) { G.prepK = G.prepShow = G.prepAt = 0; setMode('prep'); return; } setMode('count'); G.countOff = INTRO; }
   function openMaps() { G.mapSel = G.mapPos = 0; setMode('maps'); newDemo('snow', G.char); if (!AU.playing()) AU.music('title'); }   // (always opens on 經典雪坡)
   function openSelect() { G.sel = SkiChars.index(G.char); setMode('select'); if (!AU.playing()) AU.music('title'); }
   function backToTitle() { if (G.demoMap !== 'snow' || G.demoChar !== 'anje') newDemo('snow', 'anje'); setMode('title'); }
@@ -277,6 +278,9 @@
         if (go) { G.char = SkiChars.list[G.sel].id; SkiChars.save(store, G.char); AU.sfx('select'); openMaps(); }
         break;
       }
+      case 'prep':                                                 // (given up after a while: the race fetches what is missing as before)
+        if ((G.prepK >= 1 && G.prepShow >= 1) || G.modeT > 20) { setMode('count'); G.countOff = INTRO; }
+        break;
       case 'count': {
         for (const [x, y] of inp.taps) if (near(L.pause, x, y)) pauseGame(); else if (near(L.mute, x, y)) AU.setMuted(!AU.muted);
         if (inp.pause) { pauseGame(); break; }
@@ -370,10 +374,18 @@
     ctx.setTransform(bs, 0, 0, bs, 0, 0);
     ctx.imageSmoothingEnabled = false;
     if (G.mode === 'loading') { HUD.loading(G.loadP || 0); return; }
+    if (G.mode === 'prep') {
+      if (window.SkiSite) SkiSite.begin(false);
+      G.prepK = MAP().prep();
+      if (G.prepK >= 1 && G.view) WD.draw({ s: G.s, t: G.t, cam: G.view, trail: G.trail, char: G.char, theme: G.s.course.map.theme });   // (once it is in: the course drawn under the loading screen, so its first frame does not stall the countdown)
+      if (window.SkiSite) SkiSite.end();
+      const now = performance.now(), dt = Math.min(0.25, (now - (G.prepAt || now)) / 1000); G.prepAt = now;
+      G.prepShow = Math.min(G.prepK, G.prepShow + dt * 2);         // (its bar eased along in real time, never back)
+      if (MAP().loading) MAP().loading({ k: G.prepShow, t: G.t, char: G.char }); else HUD.loading(G.prepShow); return; }
     const attract = G.mode === 'title' || G.mode === 'maps' || G.mode === 'select', st = attract ? G.demo : G.s;
     if (G.shake > 0) ctx.translate((Math.random() - 0.5) * 30 * G.shake, (Math.random() - 0.5) * 30 * G.shake);
     const theme = st.course.map.theme;
-    if (window.SkiSite) SkiSite.begin();                         // (the website under the canvas: shown only if the map asks for it this frame)
+    if (window.SkiSite) SkiSite.begin(attract);                  // (the website under the canvas: shown only if the map asks for it this frame, and never behind the menus)
     const info = WD.draw({ s: st, t: G.t, cam: G.view, trail: attract ? G.demoTrail : G.trail, char: attract ? G.demoChar : G.char, theme });
     if (!attract) G.anje = info.anje;
     WD.drawParts();

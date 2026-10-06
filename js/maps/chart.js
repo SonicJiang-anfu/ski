@@ -672,20 +672,35 @@
   let FADE = 1, ASKED = false, WARMED = false;
   function showPage(R) {
     const S = root.SkiSite;
-    if (!S) { FADE = 1; return; }
+    if (!S || S.demo) { FADE = 1; return; }                      // (skied behind the map cards: fetching and laying out the site there stalled the cards for seconds; it comes with the race)
     if (!ASKED) { ASKED = true; for (const p of PAGES) S.load(S.layout() === 'phone' ? p[2] : p[1]); }   // (fetched as the map starts, long before they are needed)
     const L = S.layout() === 'phone' ? 2 : 1, at = R.sz < PAGES[0][0] ? -1 : pageOf(R.sz);
     for (let j = at + 1; j < PAGES.length; j++) S.ready(PAGES[j][L]);   // (the pages to come: drawn under what is in front from the start of the race, as they come in; drawn first later, each cost a stutter)
-    if (!WARMED && S.font() && typeof document !== 'undefined') {   // (the site's type in the canvas, set once before it is needed: the first time costs)
-      WARMED = true;
-      const g = document.createElement('canvas').getContext('2d'), all = [...POPS.flat(), ...PAGES.map(p => p[3]), ...COOKIE, '已加入收藏 ✓ ✕ → 前往「」'].join('');
-      for (const w of [400, 500, 600, 700, 800]) { g.font = font(w, 20); g.fillText(all, 0, 20); }
-    }
+    warmType(S);
     const a = pageA(R.sz);
     if (a <= 0) { FADE = 1; return; }
     const i = pageOf(R.sz), p = PAGES[i];
     FADE = S.show(p[L], (R.sz - p[0]) * S.width() / PAGE_W) ? 1 - a : 1;   // (the page scrolled as far down as she has come since it opened; not in yet: the void stays)
   }
+  function warmType(S) {                                        // (the site's type in the canvas, set once before it is needed: the first time costs)
+    if (WARMED || !S.font() || typeof document === 'undefined') return;
+    WARMED = true;
+    const g = document.createElement('canvas').getContext('2d'), all = [...POPS.flat(), ...PAGES.map(p => p[3]), ...COOKIE, '已加入收藏 ✓ ✕ → 前往「」'].join('');
+    for (const w of [400, 500, 600, 700, 800]) { g.font = font(w, 20); g.fillText(all, 0, 20); }
+  }
+  // before the first race, behind the loading screen (main.js 'prep'): the site's pages fetched, laid out and run down
+  // once, which stalls for seconds; doing it as the map's card came up (its demo run) or in the countdown froze them.
+  // 0..1; look: only how far it has got
+  function prep(look) {
+    const S = root.SkiSite;
+    if (!S || typeof document === 'undefined') return 1;
+    const L = S.layout() === 'phone' ? 2 : 1;
+    let k = 0;
+    for (const p of PAGES) { if (!look) S.ready(p[L]); k += S.progress(p[L]); }
+    if (!look && k >= PAGES.length) warmType(S);
+    return k / PAGES.length;
+  }
+
   // what pops up over the page, drawn flat on it in the site's own manner (its type, its colours), in pixels of a page
   // PX to the unit, exactly as big as it is to hit; it shows as the camera comes round over her
   const PX = 60, INK = '#1a2340', SUB = '#64748b', LINE = '#e2e8f0', CTA = '#c2410c';
@@ -954,6 +969,34 @@
     },
   };
 
-  root.SkiMaps.define('chart', { course, theme, music: { race: 'chart', result: 'chart_result', cues: { back: 'chart_back', front: 'chart_tube', web: 'chart_web', rings: 'chart_end' } },
+  // its loading screen (main.js 'prep', the first race only): the void, the name, and a price line climbing as it
+  // loads, her riding its tip (a made-up line, as every curve the game draws itself). o: { k 0..1, t, char }
+  const RISE = [0, 0.04, 0.02, 0.09, 0.07, 0.15, 0.13, 0.12, 0.2, 0.26, 0.23, 0.31, 0.29, 0.38, 0.47, 0.44, 0.52, 0.6, 0.57, 0.66, 0.74, 0.71, 0.82, 0.9, 1];
+  function loading(o) {
+    const D = root.SkiDraw, g = D.ctx, W = D.W, H = D.H, P = D.P, t = o.t, beat = 0.5 + 0.5 * Math.sin(t * 6);
+    D.rect(0, 0, W, H, C.void);
+    g.fillStyle = 'rgba(42,74,160,0.22)';                         // (the grid of the void, drifting)
+    const s = 60, off = (t * 40) % s;
+    for (let x = -off; x < W; x += s) g.fillRect(x, 0, 2, H);
+    for (let y = -off; y < H; y += s) g.fillRect(0, y, W, 2);
+    const ty = P ? H * 0.3 : H * 0.27;
+    D.txt('HOUSING DECODER', W / 2, ty - (P ? 120 : 110), { size: 30, color: C.cyan, align: 'center', ls: 12 });
+    g.save(); g.shadowColor = C.cyan; g.shadowBlur = 24 + 12 * beat;
+    D.txt('數讀房市', W / 2, ty, { size: P ? 120 : 110, color: C.white, align: 'center' }); g.restore();
+    // the line: across the middle, drawn as far as it has loaded
+    const x0 = P ? 110 : W / 2 - 560, x1 = W - x0, y0 = P ? H * 0.66 : H * 0.8, y1 = P ? H * 0.42 : H * 0.42, n = RISE.length - 1;
+    const pt = u => { const i = Math.min(n - 1, Math.floor(u * n)), f = u * n - i, v = RISE[i] + (RISE[i + 1] - RISE[i]) * f; return [x0 + (x1 - x0) * u, y0 + (y1 - y0) * v]; };
+    g.strokeStyle = 'rgba(74,216,255,0.18)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y0); g.stroke();   // (its floor)
+    const k = clamp(o.k), m = Math.max(1, Math.round(k * 120));
+    g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
+    g.beginPath(); for (let j = 0; j <= m; j++) { const [x, y] = pt(k * j / m); j ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.shadowColor = C.orange; g.shadowBlur = 20; g.strokeStyle = C.orange; g.lineWidth = 8; g.stroke(); g.restore();
+    const [hx, hy] = pt(k);
+    g.fillStyle = C.amber; g.beginPath(); g.arc(hx, hy, 9 + 4 * beat, 0, 7); g.fill();
+    const sc = P ? 4 : 3.5, bob = Math.round(Math.abs(Math.sin(t * 5)) * -6);
+    D.spr(o.char + '_ski_front' + (((t % 3.1) < 0.14) ? '_blink' : ''), hx, hy - 10 + bob, sc);
+    D.txt(Math.floor(k * 100) + '%', W / 2, y0 + (P ? 120 : 90), { size: 40, color: C.amber, align: 'center' });
+  }
+  root.SkiMaps.define('chart', { course, theme, prep, loading, music: { race: 'chart', result: 'chart_result', cues: { back: 'chart_back', front: 'chart_tube', web: 'chart_web', rings: 'chart_end' } },
     score: { par: 160, ranks: root.SkiScore.RANKS, key: 'ski-best-chart' }, bg: '#02040c' });
 })(typeof window !== 'undefined' ? window : globalThis);
