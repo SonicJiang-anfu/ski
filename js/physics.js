@@ -234,6 +234,7 @@
       s.vy -= GR * dt; s.y += s.vy * dt;
       const gnd = c.ground(s.z, s.x);
       if (off && !done) { if (s.y < gnd - 0.8) { fall(s, 'edge', ev); return ev; } }   // flew out past the edge: nothing to land on
+      else if (s.y <= gnd && side && s.vy > 0) s.y = gnd;        // inside a video game, still rising as a step up comes under her: lifted on to it, the hop carries on (not cut short against its side)
       else if (s.y <= gnd) {
         s.y = gnd; s.air = false; s.jet = false;
         if (s.airT > 0.15) ev.push({ type: 'land', airT: s.airT });

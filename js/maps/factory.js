@@ -360,8 +360,8 @@
     return [sx, sy, rr];
   }
   // a box standing on the riding surface, its sides along the course (front: the face looking back up the course)
-  function boxS(D, R, z0, z1, x0, x1, y0, y1, cols) {
-    const p = (z, x, y) => R.S3(z, x, y), cam = R.cam;
+  function boxS(D, R, z0, z1, x0, x1, y0, y1, cols, base) {        // (base: y over that height, level, instead of over the ground under each corner)
+    const p = base === undefined ? (z, x, y) => R.S3(z, x, y) : (z, x, y) => R.W3(z, x, base + y), cam = R.cam;
     D.poly3(cam, [p(z0, x0, y1), p(z0, x1, y1), p(z1, x1, y1), p(z1, x0, y1)], cols.top, 1, [0, 1, 0]);
     D.poly3(cam, [p(z0, x0, y0), p(z1, x0, y0), p(z1, x0, y1), p(z0, x0, y1)], cols.side, 1, [-1, 0, 0]);
     D.poly3(cam, [p(z0, x1, y0), p(z1, x1, y0), p(z1, x1, y1), p(z0, x1, y1)], cols.side, 1, [1, 0, 0]);
@@ -964,15 +964,22 @@
   // what stands about in the game world (behind her, never in her way): bushes, floating rows of blocks, a castle at the end
   const TVBG = (() => {
     const r = rng(2468), out = [];
-    for (let z = TV[0] + 6; z < TV[1]; z += 9 + r() * 10) out.push({ z, x: -1.6, k: r() < 0.5 ? 'bush' : 'blocks', n: 2 + ((r() * 4) | 0), y: 3.2 + ((r() * 3) | 0) * 0.9 });
+    const high = [[TV[0] + 150, TV[0] + 156 + B_SPRING.z], [TV[0] + 262, TV[0] + 286]];   // (off the spring, and hopping off the step down, she goes far higher than a hop: no blocks over those)
+    for (let z = TV[0] + 6; z < TV[1]; z += 9 + r() * 10) {
+      const k = r() < 0.5 ? 'bush' : 'blocks', n = 2 + ((r() * 4) | 0), y = 4.8 + ((r() * 3) | 0) * 0.9;   // (over the top of any hop: blocks over a game's head look solid, so she never seems to go through one)
+      const pit = course.obstacles.some(o => o.hole && z > (o.vis ? o.vis[0] : o.z - o.hd) - 1.5 && z < (o.vis ? o.vis[1] : o.z + o.hd) + 1.5);   // (a bush stands on the ground, never over a chasm)
+      if (k === 'bush' ? !pit : !high.some(([a, b]) => z + n * 1.1 > a && z < b)) out.push({ z, x: -1.6, k, n, y });
+    }
     return out;
   })();
   function tvDeco(D, R, b) {
     if (b.k === 'bush') { R.billboard(PIX.bush, b.z, b.x, 0); return; }
+    let base = -1e9;                                             // (level, over the highest ground under it: never bent over a step)
+    for (let z = b.z; z <= b.z + b.n * 1.1; z += 0.5) base = Math.max(base, R.CO.surf(z, b.x));
     for (let i = 0; i < b.n; i++) {                             // a row of blocks in the air: bricks, and a lit one with a star
       const z0 = b.z + i * 1.1, lit = i === (b.n >> 1);
-      boxS(D, R, z0, z0 + 1, b.x - 0.5, b.x + 0.5, b.y, b.y + 1, lit ? { top: '#ffe08a', side: '#e8a91a', front: '#ffcf3a', back: '#ffcf3a' } : { top: '#e88a4a', side: '#a84a1a', front: '#c8642a', back: '#c8642a' });
-      if (lit) text3(R.SkiDraw || root.SkiDraw, R, R.S3(z0 + 0.5, b.x + 0.52, b.y + 0.5), '★', 0.7, '#ffffff', { far: 60 });
+      boxS(D, R, z0, z0 + 1, b.x - 0.5, b.x + 0.5, b.y, b.y + 1, lit ? { top: '#ffe08a', side: '#e8a91a', front: '#ffcf3a', back: '#ffcf3a' } : { top: '#e88a4a', side: '#a84a1a', front: '#c8642a', back: '#c8642a' }, base);
+      if (lit) text3(R.SkiDraw || root.SkiDraw, R, R.W3(z0 + 0.5, b.x + 0.52, base + b.y + 0.5), '★', 0.7, '#ffffff', { far: 60 });
     }
   }
   function spring(D, R, r) {                                        // a big spring: a coil under a red pad, squashed as she lands on it
