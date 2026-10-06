@@ -405,7 +405,9 @@
       const D = root.SkiDraw, { cam, P3, t } = R;
       const ea = elev(za), eb = elev(zb);
       const grass = ((Math.floor(za / 8) % 2) + 2) % 2 ? '#86d36a' : '#7cc95f';
-      D.poly3(cam, [P3(za, -SKW, -ea), P3(za, SKW, -ea), P3(zb, SKW, -eb), P3(zb, -SKW, -eb)], grass);
+      const zp = clamp(FINISH - 2, za, zb);                         // (round the splash pool only either side of it: grass under it, from a slice drawn later, would show through it seen side on)
+      if (zp > za) D.poly3(cam, [P3(za, -SKW, -ea), P3(za, SKW, -ea), P3(zp, SKW, -elev(zp)), P3(zp, -SKW, -elev(zp))], grass);
+      if (zb > zp) for (const sd of [-1, 1]) D.poly3(cam, [P3(zp, sd * SKW, -elev(zp)), P3(zp, sd * (POOL_W + 1), -elev(zp)), P3(zb, sd * (POOL_W + 1), -eb), P3(zb, sd * SKW, -eb)], grass);
       for (const p of PARK.pools) {
         const z0 = Math.max(za, p.z0 - 0.5), z1 = Math.min(zb, p.z1 + 0.5);
         if (z1 <= z0) continue;
@@ -422,10 +424,19 @@
         const z0 = Math.max(za, FINISH - 2);
         D.poly3(cam, [P3(z0, -POOL_W - 1, -0.12), P3(z0, POOL_W + 1, -0.12), P3(zb, POOL_W + 1, -0.12), P3(zb, -POOL_W - 1, -0.12)], '#ffffff');
         D.poly3(cam, [P3(z0, -POOL_W, -0.1), P3(z0, POOL_W, -0.1), P3(zb, POOL_W, -0.1), P3(zb, -POOL_W, -0.1)], ((Math.floor(za / 4) % 2) + 2) % 2 ? '#3fc6ec' : '#4fd0f0');
-        for (const lx of [-12, -6, 6, 12]) if (near) D.poly3(cam, [P3(z0, lx - 0.1, -0.09), P3(z0, lx + 0.1, -0.09), P3(zb, lx + 0.1, -0.09), P3(zb, lx - 0.1, -0.09)], ((Math.floor(za / 2) % 2) + 2) % 2 ? '#e8413a' : '#ffffff');
         for (let k = 0; k < 4; k++) {                               // the waves, rolling in from the wave house
           const wz = WAVEH.z - ((t * 3 + k * 13) % 52), a = Math.max(z0, wz), b = Math.min(zb, wz + 0.8);
           if (b > a) D.poly3(cam, [P3(a, -POOL_W + 0.4, -0.08), P3(a, POOL_W - 0.4, -0.08), P3(b, POOL_W - 0.4, -0.08), P3(b, -POOL_W + 0.4, -0.08)], '#ffffff', 0.75 * Math.min(1, (wz - FINISH) / 12));
+        }
+        for (const rz of [FINISH + 40, WAVEH.z - 7]) if (rz >= z0 && rz < zb) {   // float lines across the pool, keeping swimmers off the wave house: a rope, red and white floats bobbing on it
+          D.poly3(cam, [P3(rz - 0.05, -POOL_W, -0.06), P3(rz - 0.05, POOL_W, -0.06), P3(rz + 0.05, POOL_W, -0.06), P3(rz + 0.05, -POOL_W, -0.06)], '#2a4a8a');
+          const g = D.ctx;
+          for (let k = 0; k <= 30; k++) {
+            const q = D.toCam(cam, P3(rz, lerp(-POOL_W + 0.5, POOL_W - 0.5, k / 30), 0.12 + 0.06 * Math.sin(t * 2.4 + k * 0.9)));
+            if (q[2] < 1) continue;
+            const [sx, sy] = D.scr(cam, q), r = Math.max(1.5, cam.F / q[2] * 0.3);
+            g.fillStyle = k % 2 ? '#e8413a' : '#ffffff'; g.beginPath(); g.ellipse(sx, sy, r * 1.2, r, 0, 0, 7); g.fill();
+          }
         }
       }
       if (near && ea > 1) for (let pz = Math.ceil((za - 4) / 8) * 8 + 4; pz < zb; pz += 8) {   // stilts and a cross beam

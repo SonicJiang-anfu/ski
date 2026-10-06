@@ -35,7 +35,7 @@
     };
   }
 
-  // def: { id, HALF, FINISH, LENGTH, START, CX: [[z, x]] (smoothstep, or a spline with `flow`), GRADE: [[z, grade]] (linear), bowl?, phys?,
+  // def: { id, HALF, FINISH, LENGTH, START, STOP? (past the finish she has stopped by here: FINISH + 30), CX: [[z, x]] (smoothstep, or a spline with `flow`), GRADE: [[z, grade]] (linear), bowl?, phys?,
   //        WIDTH?: [[z, half]] (smoothstep; HALF everywhere if left out), OPEN?: [[z0, z1]] (no walls there: past the
   //        edge she falls off), slow?: [[z0, z1, side?]] (slow motion while she flies there; side −1 or 1: only on that side of the centre line), VERT?: [[z0, z1]] (a sheer face she rides straight down instead of flying off),
   //        SPLIT?: [{ m: [[z, m]], L?: [[z, up]], R?: [[z, up]] }] (a fork: a median m either side of the centre line splits
@@ -70,7 +70,7 @@
   //        sections: [{name, z0}] }
   // fill(c, put): places obstacles, ramps, coins and boost pads using the helpers in `put`
   function build(def, fill) {
-    const { HALF, FINISH, LENGTH, START = 4 } = def;
+    const { HALF, FINISH, LENGTH, START = 4, STOP = FINISH + 30 } = def;
     const cxRaw = def.flow ? spline(def.CX) : piece(def.CX, smooth), gradeRaw = piece(def.GRADE, t => t);
     const STEP = 0.5;
     const centerX = table(LENGTH + 40, STEP, z => cxRaw(z));
@@ -170,7 +170,7 @@
       return 1;
     };
 
-    const c = { id: def.id, HALF, FINISH, LENGTH, START, centerX, height, grade, gradeAt, slopeX, heading, surf, bank, bowl: B || null, halfAt, openAt, vertAt, sideAt, sideK, side: SIDE, railAt, rail: RAIL,
+    const c = { id: def.id, HALF, FINISH, LENGTH, START, STOP, centerX, height, grade, gradeAt, slopeX, heading, surf, bank, bowl: B || null, halfAt, openAt, vertAt, sideAt, sideK, side: SIDE, railAt, rail: RAIL,
       tube: TUB, tubeAt, tubeK, tubeOf, curvAt, wrapX,
       loop: LP, loopAt, shiftX, worldZ, world, flat, bent: !!(LP || twistAt || TUB.length), twistAt, twistFrame, twist: TWP, od: OD, odAt,
       back: BACK, backAt, backK, page: PG, pageAt, pageK, flipAt, capAt, surgeAt, clone: CLONE, cloneK, top: TOP, topK, lowg: LG, gravAt, bendAt: def.BEND ? within(def.BEND, piece(def.BEND, smooth)) : null,

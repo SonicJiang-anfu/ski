@@ -66,7 +66,7 @@
   const stampY = (o, t, z) => {
     if (o.stamp.near) {
       const d = o.z - z, H = o.stamp.top, lo = o.stamp.near.low;
-      return d > 12 ? H : d > 9 ? lo + (H - lo) * (1 - ((12 - d) / 3) ** 2) : d > -3 ? lo : lo + (H - lo) * smooth(Math.min(1, (-3 - d) / 6));
+      return d > 30 ? H : d > 26 ? lo + (H - lo) * (1 - ((30 - d) / 4) ** 2) : d > -3 ? lo : lo + (H - lo) * smooth(Math.min(1, (-3 - d) / 6));   // (down well before she gets there, to stay: plain to see it is one to crouch under)
     }
     const u = (((o.stamp.w * t + o.stamp.ph) / (2 * Math.PI)) % 1 + 1) % 1, H = o.stamp.top;
     return u < 0.45 ? H : u < 0.55 ? H * (1 - ((u - 0.45) / 0.1) ** 2) : u < 0.75 ? 0 : H * smooth((u - 0.75) / 0.25);

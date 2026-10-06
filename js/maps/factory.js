@@ -8,9 +8,7 @@
 // spikes, crushers to crouch under, pipes to duck, a spring; out through the screen again onto an orange toy race track with
 // wind-up cars, a leap over a broken piece of track, the track split in two by a divider (boost pads one side, cars and
 // a kicker the other), a full vertical loop the camera rides round with her, upside down at the top, then a corkscrew
-// that rolls her right over (nothing in the way: it is for the ride); out through a giant gift box. Early on, a giant
-// wind-up key winds her right up: WIND-UP, faster than ever, and she bowls straight through towers of blocks, teddy
-// bears, dominoes and presents.
+// that rolls her right over (nothing in the way: it is for the ride); out through a giant gift box.
 (function (root) {
   const { clamp, lerp, seg, smooth, rng, mixHex, obX, obZ, stampY } = root.SkiCore;
 
@@ -23,7 +21,6 @@
   const FINISH = Math.round(L1 + 150);
   const BOOTH = [FORK1[0] + 26, FORK1[1] - 30];                 // the paint booth down the right side of the sorter
   const T = z => z + 340;                                       // (the race track is laid out from where it used to start)
-  const WIND = [282, 362];                                      // wound right up (overdrive): through everything in the way
   const FORK3 = [T(1216), T(1298)];                             // the race track split by a divider: boost pads (left) / cars and a kicker (right)
   const SCREW = [L1 + 12, L1 + 76];                             // the corkscrew past the loop
 
@@ -75,7 +72,6 @@
       R: [[FORK1[0] + 3, 0], [FORK1[0] + 24, -1.4], [FORK1[1] - 34, -1.4], [FORK1[1] - 13, 0]] },  // down through the paint booth
     { m: [[FORK2[0] - 1, 0], [FORK2[0] + 10, 1], [FORK2[1] - 10, 1], [FORK2[1], 0]] },
     { m: [[FORK3[0] - 1, 0], [FORK3[0] + 10, 0.8], [FORK3[1] - 10, 0.8], [FORK3[1], 0]] }],
-    OD: [WIND],
     TWIST: [[SCREW[0], 0], [SCREW[1], 2 * Math.PI]], TWAX: [[0, 0.8]],   // (about a line just over the track: it rolls in place, like a ribbon)
     SIDE: [TV],
     LOOP,
@@ -112,15 +108,13 @@
       const free = [-4.5, 0, 4.5].find(x => !xs.includes(x));
       coin(z - 8, free); coin(z, xs[0], 0.9);                    // (one under a press, for the brave)
     });
-    // the giant wind-up key: wound right up, she bowls through towers of blocks, teddy bears, dominoes, presents
-    P.cue(WIND[0] - 4, 'windup'); P.cue(WIND[1] + 2, 'unwind');
-    [[290, [-4.5, 0, 4.5]], [298, [-2.2, 2.2]], [306, [-5, -1.5, 1.5, 5]], [314, [-3, 3]], [322, [-4.5, 0, 4.5]], [330, [-5.2, -2, 2, 5.2]], [338, [-3.2, 3.2]], [346, [-4.5, 0, 4.5]], [354, [-2.4, 2.4]]].forEach(([z, xs], k) => xs.forEach((x, j) => {
-      const kind = (k + j) % 4;
-      if (kind === 0) blocks(z, x, 1.0);
-      else if (kind === 1) P.tall('teddy', z, x, 0.9, { hd: 0.7 });
-      else if (kind === 2) { for (const d of [-0.6, 0, 0.6]) P.hop('domino', z + d * 1.3, x + d, 0.35, { h: 0.95, hd: 0.15 }); }
-      else { gift(z, x); if (k % 2) coin(z, x, 1.4); }
-    }));
+    // stacks of toys waiting to be packed, one side then the other, presents to hop between them
+    blocks(292, -3); coin(292, 3);
+    P.tall('teddy', 306, 3, 0.9, { hd: 0.7 }); coin(306, -3);
+    gift(318, -3.5); gift(318, 3.5);
+    blocks(332, 3); coin(332, -3);
+    P.tall('teddy', 346, -3, 0.9, { hd: 0.7 });
+    gift(358, 0);
     robot(370, 0, 3.5, 2.6); robot(388, 0, 3.5, 2.3); boost(400, 0, 1.6, 6); coin(379, 0);
     // ② 分揀岔路: the sorting machine splits the line round its divider. Left: up onto a catwalk of belts (pushing her
     // at the divider) and presses, more coins; right: down through the paint booth, marbles rolling across, tin
@@ -173,8 +167,8 @@
     const v = z => TV[0] + z;
     const walker = (z, k = 0.25) => P.walker('walker', v(z), 0, 0.55, { k, h: 0.9 });
     const spikes = (z, n = 1) => P.hop('spikes', v(z), 0, 2.5, { h: 0.6, hd: 0.5 * n });
-    const crusher = z => P.stamp('crusher', v(z), 0, 2.5, 1, { top: 3.2, hd: 1.2, near: { low: 1.4 } });   // (it slams down as she gets there, to just over a crouch)
-    const beam = z => P.over('beam', v(z), 0, 5, { hd: 0.4 });          // a toy crossbar: duck
+    const crusher = z => P.stamp('crusher', v(z), 0, 2.5, 1, { top: 3.2, hd: 1.2, near: { low: 1.4 } });   // (hung from the top of the screen, it slams down well before she gets there and stays, just over a crouch)
+    const beam = z => P.over('beam', v(z), 0, 5, { hd: 0.8, y1: 99 });   // a pipe hanging from the top of the screen down to head height: under it crouched (nothing to hop over)
     const pit2 = (z, len) => { P.gap('chasm', v(z) + 0.6, len - 1.2, { hw: 2.5 }); c.obstacles[c.obstacles.length - 1].vis = [v(z), v(z) + len]; };   // (a little kinder than it looks at either edge, like any platformer)
     P.cue(TV[0] - 1, 'tvin');
     row(v(4), 0, 3, 2); row(v(16), 0, 3, 2);                         // (a moment to find her feet before the first gap: no robots yet)
@@ -374,41 +368,9 @@
     D.poly3(cam, [p(z0, x0, y0), p(z0, x1, y0), p(z0, x1, y1), p(z0, x0, y1)], cols.front, 1, [0, 0, -1]);
     if (cols.back) D.poly3(cam, [p(z1, x0, y0), p(z1, x1, y0), p(z1, x1, y1), p(z1, x0, y1)], cols.back, 1, [0, 0, 1]);
   }
-  // ---- the wind-up: the giant key she is wound up by, and what she bowls through
-  const SMASHED = new Map();                                      // since when each thing knocked flying has been in pieces
-  function toyDebris(D, R, o) {                                   // knocked flying: bright blocks and pieces tumbling off ahead of her
-    if (!SMASHED.has(o)) SMASHED.set(o, R.t);
-    const age = R.t - SMASHED.get(o);
-    if (age > 1.1) return;
-    const r = rng(Math.round(o.z * 13 + o.x * 7 + 1));
-    for (let j = 0; j < 8; j++) {
-      const vx = (r() - 0.5) * 12, vy = 3 + r() * 8, vz = 4 + r() * 14, y = 0.6 + vy * age - 13 * age * age;
-      const q = D.toCam(R.cam, R.S3(o.z + vz * age, o.x + vx * age, Math.max(0.1, y)));
-      if (q[2] < 0.8) continue;
-      const [sx, sy] = D.scr(R.cam, q), s = clamp(R.cam.F / q[2] * (0.35 + (j % 3) * 0.12), 3, 50);
-      D.rect(sx - s / 2, sy - s / 2, s, s, TOY[(j + Math.round(o.z)) % TOY.length], 1 - age / 1.1);
-    }
-  }
-  function dominoObs(D, R, o) {                                   // a big domino standing on end: black, white pips
-    const z0 = o.z - o.hd, z1 = o.z + o.hd, x0 = o.x - o.hw, x1 = o.x + o.hw;
-    boxS(D, R, z0, z1, x0, x1, 0, o.h, { top: '#3a3a3a', side: '#2a2a2a', front: '#1a1a1a' });
-    D.poly3(R.cam, [R.S3(z0 - 0.01, x0, o.h * 0.48), R.S3(z0 - 0.01, x1, o.h * 0.48), R.S3(z0 - 0.01, x1, o.h * 0.52), R.S3(z0 - 0.01, x0, o.h * 0.52)], '#ffffff');
-    for (const y of [0.25, 0.75]) ball3(D, R, R.S3(z0 - 0.02, o.x, o.h * y), 0.09, '#ffffff', null);
-  }
   function dividerObs(D, R, o) {                                  // the nose of the divider down the race track: blue, striped
     boxS(D, R, o.z - o.hd, o.z + o.hd, o.x - o.hw, o.x + o.hw, 0, 1.2, { top: '#7fb2ff', side: '#2f6fe0', front: '#2f6fe0' });
     for (let k = 0; k < 3; k++) D.poly3(R.cam, [R.S3(o.z - o.hd - 0.01, o.x - o.hw + k * 0.6, 0.2), R.S3(o.z - o.hd - 0.01, o.x - o.hw + k * 0.6 + 0.3, 0.2), R.S3(o.z - o.hd - 0.01, o.x - o.hw + k * 0.6 + 0.3, 1.0), R.S3(o.z - o.hd - 0.01, o.x - o.hw + k * 0.6, 1.0)], '#ffffff');
-  }
-  function windKey(D, R) {                                        // a giant wind-up key arching over the line, turning: wound right up
-    const { cam, P3, t } = R, z = WIND[0] - 3, h = HW(z) + 0.8, a = t * 3, y = 7.2;
-    for (const sd of [-1, 1]) boxS(D, R, z - 0.4, z + 0.4, sd * h - 0.4, sd * h + 0.4, 0, y, { top: '#c8a020', side: '#a88010', front: '#e8b828' });
-    D.poly3(cam, [P3(z, -h, y - 0.3), P3(z, h, y - 0.3), P3(z, h, y + 0.5), P3(z, -h, y + 0.5)], '#e8b828');   // its shaft across
-    for (const sd of [-1, 1]) {                                    // its two wings, turning
-      const c = Math.cos(a) * sd, s = Math.sin(a) * sd, X = 0, Y = y + 3.2, w = 3.6;
-      D.poly3(cam, [P3(z, X, y + 0.5), P3(z, X + c * w - s * 1.6, Y + s * w * 0.5 + c * 1.6), P3(z, X + c * w + s * 1.6, Y + s * w * 0.5 - c * 1.6)], sd > 0 ? '#ffd23f' : '#e8b828');
-    }
-    ball3(D, R, P3(z, 0, y + 0.1), 0.6, '#ffd23f');
-    text3(D, R, P3(z - 0.5, 0, y - 1.2), '發條全開', 0.9, '#ffffff', { far: 110 });
   }
   // a box on the hall floor (y from the floor), x across from the centre line (the hall's own x round the loop)
   function boxF(D, R, z0, z1, x0, x1, y0, y1, cols, k = 0) {
@@ -601,6 +563,30 @@
     glowDot(D, R, S3(z0 - 0.05, x1 + 0.17, top + 0.35), 0.16, red ? '#ff3030' : '#3fd06a', red && Math.floor(R.t * 10) % 2 ? 1 : 0.6);
     if (y > 2.6 && R.near(o.z)) D.poly3(cam, [P3(z0 - 0.02, o.x - 0.5, 0.25), P3(z0 - 0.02, o.x + 0.5, 0.25), P3(z0 - 0.02, o.x, 0.05)], '#ffffff', 0.5);
   }
+  // inside the TV, what she crouches under hangs down from the top of the screen (nothing standing under it, nothing to
+  // hop over), its bottom at head height: a crusher on a ram, a green pipe
+  function hungCrusher(D, R, o) {
+    const { cam, S3 } = R, y = stampY(o, R.rt, R.sz), x0 = o.x - o.hw, x1 = o.x + o.hw, z0 = o.z - o.hd, z1 = o.z + o.hd;
+    boxS(D, R, o.z - 0.5, o.z + 0.5, o.x - 0.5, o.x + 0.5, y + 2.2, 30, { top: '#c9ced9', side: '#9aa3b4', front: '#b0b8c8' });   // the ram, up off the top of the screen
+    boxS(D, R, z0 + 0.3, z1 - 0.3, x0 + 0.2, x1 - 0.2, y + 1.8, y + 2.2, { top: '#6c7486', side: '#4a5060', front: '#5a6070' });
+    boxS(D, R, z0, z1, x0, x1, y, y + 1.8, { top: '#9aa3b4', side: '#7a8296', front: '#8a93a6' });   // the head
+    for (const sd of [-1, 1]) for (let k = 0; k < 6; k++) {         // hazard stripes along its bottom edge, on the sides she sees it from
+      const za = lerp(z0, z1, k / 6), zb = lerp(z0, z1, (k + 1) / 6), X = sd > 0 ? x1 + 0.01 : x0 - 0.01;
+      D.poly3(cam, [S3(za, X, y), S3(zb, X, y), S3(zb, X, y + 0.4), S3(za, X, y + 0.4)], k % 2 ? '#2a2d36' : '#ffcf3a', 1, [sd, 0, 0]);
+    }
+  }
+  function hangPipe(D, R, o) {
+    const { cam, S3 } = R, z = o.z, y = o.y0, w = o.hd - 0.2;
+    boxS(D, R, z - w, z + w, -0.9, 0.9, y + 0.6, 30, { top: '#5ad04a', side: '#2fa83a', front: '#3fbf45' });   // the pipe, up off the top of the screen
+    boxS(D, R, z - o.hd, z + o.hd, -1.1, 1.1, y, y + 0.6, { top: '#5ad04a', side: '#2fa83a', front: '#3fbf45' });   // its mouth
+    for (const sd of [-1, 1]) {                                     // a shine down it, dark edges
+      const X = sd * 0.91, Xm = sd * 1.11;
+      D.poly3(cam, [S3(z - w * 0.55, X, y + 0.6), S3(z - w * 0.25, X, y + 0.6), S3(z - w * 0.25, X, 30), S3(z - w * 0.55, X, 30)], '#9cf08a', 1, [sd, 0, 0]);
+      D.poly3(cam, [S3(z + w * 0.75, X, y + 0.6), S3(z + w, X, y + 0.6), S3(z + w, X, 30), S3(z + w * 0.75, X, 30)], '#1d7a2a', 1, [sd, 0, 0]);
+      D.poly3(cam, [S3(z - o.hd * 0.6, Xm, y), S3(z - o.hd * 0.3, Xm, y), S3(z - o.hd * 0.3, Xm, y + 0.6), S3(z - o.hd * 0.6, Xm, y + 0.6)], '#9cf08a', 1, [sd, 0, 0]);
+      D.poly3(cam, [S3(z - o.hd, Xm, y), S3(z + o.hd, Xm, y), S3(z + o.hd, Xm, y + 0.08), S3(z - o.hd, Xm, y + 0.08)], '#1d7a2a', 1, [sd, 0, 0]);
+    }
+  }
   function rcCar(D, R, o) {                                         // a wind-up race car racing her way: body, cockpit, spoiler, wheels, number
     const { cam, S3 } = R, z = obZ(o, R.sz), x = o.x, L = o.hd, W = o.hw, col = TOY[Math.round(o.z) % TOY.length];
     for (const wz of [z - L * 0.6, z + L * 0.6]) for (const sd of [-1, 1]) boxS(D, R, wz - 0.3, wz + 0.3, x + sd * W - (sd > 0 ? 0.1 : -0.1) - 0.15, x + sd * W + 0.15 - (sd > 0 ? 0.1 : -0.1), 0, 0.55, { top: '#2a2a2a', side: '#1a1a1a', front: '#2a2a2a' });
@@ -745,7 +731,6 @@
         for (const sh of SHELVES) if (Math.abs(sh.z - R.zc) < 70) add(sh.z + 3.2, () => shelf(D, R, sh), false, sh.x);
       }
       const ok = (z, d = 115) => z > lo && z < hi && Math.abs(z - zc) < d;
-      if (ok(WIND[0], 125)) add(WIND[0] - 3, () => windKey(D, R));
       const flat = cam.u[1] > 0.5;                                 // (flat pictures only while the view is upright)
       if ((cam.side || 0) > 0.5) {                                 // inside the television: the game's own scenery only
         for (const b of TVBG) if (b.z > lo && b.z < hi && Math.abs(b.z - R.sz) < 40) add(b.z, () => tvDeco(D, R, b), false, b.x);
@@ -779,7 +764,7 @@
     gate(R, z, i, label) {
       const D = root.SkiDraw, { cam, P3 } = R, zn = zone(z);
       if (label === 'GOAL') { giftArch(D, R, false); return; }
-      if (!label && (MED(z) > 0 || Math.abs(z - WIND[0]) < 10 || (z > SCREW[0] - 4 && z < SCREW[1] + 4) || nearTV(z) || Math.abs(z - (L0 + L1) / 2) < 80 || Math.abs(z - GAPZ - 15) < 30 || (z > MEGAZ - 6 && z < MEGAZ + B_MEGA.z + 4))) return;
+      if (!label && (MED(z) > 0 || (z > SCREW[0] - 4 && z < SCREW[1] + 4) || nearTV(z) || Math.abs(z - (L0 + L1) / 2) < 80 || Math.abs(z - GAPZ - 15) < 30 || (z > MEGAZ - 6 && z < MEGAZ + B_MEGA.z + 4))) return;
       const h = HW(z) + 0.5;
       if (zn === 'pit' && !label) {                               // bunting across
         for (let k = 0; k < 14; k++) { const x0 = lerp(-h, h, k / 14), x1 = lerp(-h, h, (k + 1) / 14), sag = (u) => 10 - Math.sin(u * Math.PI) * 1.2; D.poly3(cam, [P3(z, x0, sag(k / 14)), P3(z, x1, sag((k + 1) / 14)), P3(z, (x0 + x1) / 2, sag((k + 0.5) / 14) - 0.9)], TOY[k % TOY.length]); }
@@ -800,13 +785,11 @@
     },
     obstacle(R, o, i) {
       const D = root.SkiDraw, { cam, S3, P3 } = R;
-      if (o.k !== 'walker' && R.squash && R.squash.has(o)) { toyDebris(D, R, o); return; }   // (knocked flying while wound up)
-      SMASHED.delete(o);
       switch (o.k) {
         case 'teddy': R.billboard({ ...PIX.teddy, cs: 0.17 }, o.z, o.x, 0); break;
-        case 'domino': dominoObs(D, R, o); break;
         case 'divider': dividerObs(D, R, o); break;
-        case 'press': case 'crusher': pressObs(D, R, o); break;
+        case 'press': pressObs(D, R, o); break;
+        case 'crusher': if (o.stamp.near) hungCrusher(D, R, o); else pressObs(D, R, o); break;
         case 'walker': {                                            // a wind-up robot walking at her; stomped flat, it squashes, then is gone
           const z = obZ(o, R.sz), sq = R.squash && R.squash.has(o);
           if (sq) { if (!SQ.has(o)) SQ.set(o, R.t); const a = R.t - SQ.get(o); if (a < 0.5) R.billboard({ cs: 0.13, rows: PIX.walker[0], cols: PIX.walkerCols }, z, o.x, 0, 1 - a * 2, 1.4); break; }
@@ -815,13 +798,7 @@
           break;
         }
         case 'spikes': R.billboard(PIX.spikes, o.z, o.x, 0); break;
-        case 'beam': {                                              // a striped toy crossbar at chest height: duck
-          const h = o.hw;
-          boxS(D, R, o.z - o.hd, o.z + o.hd, -h, h, o.y0 + 0.05, o.y0 + 0.75, { top: '#ffffff', side: '#ff3a3a', front: '#ff3a3a' });
-          for (let k = 0; k < 4; k++) boxS(D, R, o.z - o.hd - 0.01 + k * 0.3, o.z - o.hd + 0.14 + k * 0.3, -h - 0.01, h + 0.01, o.y0 + 0.05, o.y0 + 0.76, { top: '#ffffff', side: '#ffffff', front: '#ffffff' });
-          for (const zz of [o.z - o.hd - 0.6, o.z + o.hd + 0.6]) boxS(D, R, zz - 0.15, zz + 0.15, -0.15, 0.15, 0, o.y0 + 0.75, { top: '#8a5a2a', side: '#a87840', front: '#a87840' });
-          break;
-        }
+        case 'beam': hangPipe(D, R, o); break;
         case 'rc': rcCar(D, R, o); break;
         case 'gift': giftBox(D, R, o, o.x); break;
         case 'crate': crateObs(D, R, o); break;
@@ -1167,5 +1144,5 @@
     D.print(cam, P3(z - 0.3, -h, y + 2), P3(z - 0.3, h, y + 2), P3(z - 0.3, -h, y), GOAL_SIGN, { w: 2 * h, h: 2, stroke: '#c8243a', fill: 0.6 });   // (printed on the box: it leans with it)
   }
 
-  root.SkiMaps.define('factory', { course, theme, music: { race: 'factory', result: 'factory_result', tv: 'factory_tv', back: 'factory_back', cues: { windup: 'factory_wind', unwind: 'factory_back' } }, score: { par: 122, ranks: root.SkiScore.RANKS, key: 'ski-best-factory' }, bg: '#9a8cc4' });
+  root.SkiMaps.define('factory', { course, theme, music: { race: 'factory', result: 'factory_result', tv: 'factory_tv', back: 'factory_back' }, score: { par: 122, ranks: root.SkiScore.RANKS, key: 'ski-best-factory' }, bg: '#9a8cc4' });
 })(typeof window !== 'undefined' ? window : globalThis);

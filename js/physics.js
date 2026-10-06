@@ -167,7 +167,8 @@
     // ---- forward
     const g = c.grade(s.z), gr = c.gradeAt ? c.gradeAt(s.z, s.x) : g;   // (up or down one side of a fork, the slope she rides)
     let a;
-    if (done) a = -Math.min(8, s.v * 0.8);                      // run-out: ease to a stop past the finish
+    const stop = c.STOP ?? c.FINISH + 30;                         // run-out: ease to a stop past the finish, never later than STOP (where the finish's buildings begin)
+    if (done) a = -Math.max(Math.min(8, s.v * 0.8), s.v * s.v / (2 * Math.max(0.5, stop - s.z)));
     else if (side) a = (K.V2D - s.v) * 3;                         // her own steady pace (in the air too)
     else if (s.air) a = -0.02 * s.v + K.PUSH * Math.max(0, 1 - s.v / 10);   // (the push-off at a standstill carries on through hops: hopping at the start never leaves her stuck there)
     else if (vert) a = K.VERT_A + K.G * g / Math.sqrt(1 + g * g) - 0.05 * s.v;   // straight down the face: faster and faster
@@ -190,7 +191,7 @@
     if (v > vmax && !(s.jet && s.air)) v = Math.max(vmax, Math.min(v, s.v - (s.v - vmax) * 1.5 * dt));   // over the limit (a boost wearing off): ease back down (but not thrown off a jet)
     s.v = Math.max(side ? K.V2D * 0.8 : 0, v);
     const z0 = s.z;
-    s.z = Math.min(c.LENGTH, s.z + s.v * dt * (vert ? 1 / Math.sqrt(1 + g * g) : 1));   // on a sheer face her speed runs down it, not along the map
+    s.z = Math.min(c.LENGTH, done ? Math.max(s.z, stop) : Infinity, s.z + s.v * dt * (vert ? 1 / Math.sqrt(1 + g * g) : 1));   // on a sheer face her speed runs down it, not along the map
 
     // ---- up and down
     if (!s.air && off && !done) { fall(s, 'edge', ev); return ev; }

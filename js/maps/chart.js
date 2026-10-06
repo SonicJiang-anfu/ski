@@ -148,9 +148,9 @@
     // 崩盤: the curve drops straight down, and so does she
     coin(CRASH_END + 4, 0);
     // ② 時光倒流: thrown up off a kicker the camera swings right round her in slow motion: she lands riding backwards down
-    // a strip of film, the years counting down, seeing what is coming only in the owl's mirror. Rifts in time to hop,
-    // hourglasses to go round, calendars to hop, clock hands sweeping across, banners of years to duck: a hop never
-    // straight after a hop. Thrown up again at the end, the camera swings back
+    // a strip of film, the years counting down, seeing what is coming only in the owl's mirror. Rows of hourglasses with
+    // one gap in them (left, right, the middle: ← → the wrong way round) every other time, and between them rifts in
+    // time to hop, clock hands sweeping across, banners of years to duck, a calendar. Thrown up again at the end, the camera swings back
     P.cue(KICK1 - 10, 'back');
     P.launch(KICK1, 0, 6.5, 4, KICK.vy, KICK.v, KICK.rise, { k: 'kick', sfx: 'turn' });
     const glass = (z, x) => P.tall('hourglass', z, x, 0.8, { hd: 0.6 });
@@ -158,20 +158,21 @@
     const hand = (z, x, amp, period) => P.roll('hand', z, x, 1.1, amp, period, { h: 0.6, hd: 0.35 });
     const banner = (z, x = 0, w = 2 * c.halfAt(z)) => P.over('banner', z, x, w);
     const B = z => z + OB;
+    const wall = (z, xs) => xs.forEach(x => glass(z, x));          // a row of hourglasses with one gap in it: ← → the wrong way round to find it
     coin(B(440), 0, 2.1);
-    glass(B(462), -3.6); glass(B(462), 3.6); coin(B(462), 0);
+    glass(B(462), 0); coin(B(462), -3); coin(B(462), 3);
     hand(B(484), 0, 3.6, 3.2); coin(B(484), 0, 1.7);
-    banner(B(506)); coin(B(506), 0, 0.6);
-    P.gap('rift', B(526), 3.5); coin(B(528), 0, 1.7);
-    glass(B(550), 2.4); coin(B(550), -2.6);
-    cal(B(572), -3); cal(B(572), 3); coin(B(572), 0);
-    banner(B(594)); coin(B(594), 3, 0.6);
+    wall(B(506), [-5.2, -2.6, 0, 5.6]); coin(B(506), 2.8);         // (the gap: right)
+    P.gap('rift', B(528), 3.5); coin(B(530), 0, 1.7);
+    wall(B(550), [5.2, 2.6, 0, -5.6]); coin(B(550), -2.8);         // (left)
+    banner(B(572)); coin(B(572), -2.8, 0.6);
+    glass(B(594), -2.4); glass(B(594), 2.4); coin(B(594), 0);       // (the middle)
     P.gap('rift', B(616), 4); coin(B(618), 0, 1.7);
-    glass(B(638), -2.4); coin(B(638), 2.6);
+    wall(B(638), [-5.2, -2.6, 0, 5.6]); coin(B(638), 2.8);         // (right)
     hand(B(660), 0, 3.4, 2.8); coin(B(660), 0, 1.7);
-    banner(B(682)); coin(B(682), -3, 0.6);
-    P.gap('rift', B(704), 4); coin(B(706), 0, 1.7);
-    glass(B(726), -3.6); glass(B(726), 3.6); coin(B(726), 0);
+    glass(B(682), 1.6); glass(B(682), -4.4); coin(B(682), -1.4);    // (a little left)
+    banner(B(704)); coin(B(704), -1.4, 0.6);
+    wall(B(726), [5.2, 2.6, 0, -5.6]); coin(B(726), -2.8);         // (left)
     cal(B(748), 0, 2.4); coin(B(748), -4.4);
     P.cue(KICK2 - 10, 'front');
     P.launch(KICK2, 0, 6.5, 4, KICK.vy, KICK.v, KICK.rise, { k: 'kick', sfx: 'turn' });
