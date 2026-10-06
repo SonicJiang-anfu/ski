@@ -71,6 +71,8 @@
   }
 
   // ------------------------------------------------------------ events → sound, particles, popups
+  // a phone buzzes only when she crashes or falls, the times she goes back to try again (not on iPhones: Safari has no vibrate)
+  const buzz = ms => { if (input.touch && navigator.vibrate) try { navigator.vibrate(ms); } catch (err) { /* not allowed yet */ } };
   function onEvents(ev) {
     const s = G.s, a = G.anje || [D.W / 2, D.H * 0.7, 4];
     for (const e of ev) switch (e.type) {
@@ -85,6 +87,7 @@
         WD.puff(a[0], a[1] - 30 * a[2], 8, { spread: 0.5, up: 0.8, size: 3 * a[2], cols: ['#ffd84a', '#fff3b0', '#f0a030'], life: 0.4, grav: 600 }); break;
       }
       case 'crash':
+        buzz(e.fall ? 220 : 160);
         if (e.fall) { AU.sfx('fall', { k: e.k }); G.pops.push({ kind: HUD.WORDS[`fall_${MAP().id}_${e.k}`] ? `fall_${MAP().id}_${e.k}` : HUD.WORDS['fall_' + e.k] ? 'fall_' + e.k : 'fall', t0: G.t }); WD.puff(a[0], a[1], 18, { spread: 1, up: 1.2, size: 5 * a[2] }); break; }   // off the edge, or into a gap (a map can say where she fell to: into the sky...)
         AU.sfx(e.k === 'croc' || e.k === 'swim' ? 'chomp' : 'crash'); if (CARS.has(e.k)) AU.sfx('honk'); G.pops.push({ kind: 'crash', t0: G.t }); G.shake = 0.45; WD.puff(a[0], a[1], 30, { spread: 1.4, up: 1.1, size: 6 * a[2] }); break;
       case 'rewind': AU.sfx('rewind'); G.flash = 0.8; G.cam.snap = true;
@@ -130,7 +133,7 @@
           if (e.name === 'glass') G.pops.push({ kind: 'glass', t0: G.t });
         }
         break;
-      case 'plunge': AU.sfx('plunge'); G.pops.push({ kind: HUD.WORDS['plunge_' + MAP().id] ? 'plunge_' + MAP().id : 'plunge', t0: G.t });   // (a map can call it its own name) G.flash = Math.max(G.flash, 0.3); G.shake = 0.3; break;
+      case 'plunge': AU.sfx('plunge'); G.pops.push({ kind: HUD.WORDS['plunge_' + MAP().id] ? 'plunge_' + MAP().id : 'plunge', t0: G.t }); G.flash = Math.max(G.flash, 0.3); G.shake = 0.3; break;   // (a map can call it its own name)
       case 'sink': AU.sfx('sink'); WD.puff(a[0], a[1], 8, { spread: 0.5, up: 0.4, size: 4 * a[2], life: 0.4 }); break;
       case 'boost': AU.sfx('boost'); G.flash = Math.max(G.flash, 0.2); G.pops.push({ kind: 'boost', t0: G.t }); WD.puff(a[0], a[1], 16, { spread: 0.9, up: 0.6, size: 5 * a[2], life: 0.4 }); break;
       case 'smash': {                                            // in overdrive, straight through something: a crunch, bits flying, the count going up
@@ -165,8 +168,8 @@
     const { x, y } = input.mouse, L = HUD.layout();
     if (G.mode === 'count' || G.mode === 'play' || G.mode === 'resume') return near(L.pause, x, y) ? 'pause' : near(L.mute, x, y) ? 'mute' : null;
     if (G.mode === 'pause') { const b = HUD.pauseButtons().find(b => hit(b, x, y)); return b ? b.id : null; }
-    if (G.mode === 'maps') { const L = HUD.mapLayout(G.mapPos), a = L.arrows.find(a => Math.hypot(x - a.cx, y - a.cy) < a.r * 1.3), c = [...L.cards].reverse().find(c => hit(c, x, y)); return hit(L.go, x, y) ? 'mapGo' : a ? a.id : c ? c.id : null; }
-    if (G.mode === 'select') { const SL = HUD.selectLayout(), c = SL.cards.find(c => hit(c, x, y)); return c ? c.id : hit(SL.go, x, y) ? 'go' : null; }
+    if (G.mode === 'maps') { const L = HUD.mapLayout(G.mapPos), a = L.arrows.find(a => Math.hypot(x - a.cx, y - a.cy) < a.r * 1.3), c = [...L.cards].reverse().find(c => hit(c, x, y)); return onBack(L.back, x, y) ? 'back' : hit(L.go, x, y) ? 'mapGo' : a ? a.id : c ? c.id : null; }
+    if (G.mode === 'select') { const SL = HUD.selectLayout(), c = SL.cards.find(c => hit(c, x, y)); return onBack(SL.back, x, y) ? 'back' : c ? c.id : hit(SL.go, x, y) ? 'go' : null; }
     if (G.mode === 'result' && G.modeT > 3.6) { const b = HUD.resultButtons().find(b => hit(b, x, y)); return b ? b.id : null; }
     return null;
   }
@@ -191,6 +194,7 @@
   // ------------------------------------------------------------ update
   function hit(b, x, y) { return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h; }
   const near = (c, x, y) => Math.hypot(x - c.x, y - c.y) < c.r * 1.3;
+  const onBack = (b, x, y) => Math.hypot(x - b.cx, y - b.cy) < b.r * 1.3;
   function stepRun(s, inpFn, dt) {                              // fixed 1/120 s physics steps
     let ev = [];
     const n = Math.max(1, Math.ceil(dt * 120));
@@ -220,6 +224,7 @@
     if (!dir || dir !== G.holdDir || inp.nav.left || inp.nav.right) { G.holdDir = dir; G.holdT = 0; if (G.slid) { G.slid = false; if (list[i].ready && list[i].id !== G.demoMap) newDemo(list[i].id); } }
     else if ((G.holdT += dt) >= HOLD_WAIT) { G.holdT -= HOLD_EVERY; i = clamp(i + dir, 0, list.length - 1); sliding = G.slid = true; }
     const L = HUD.mapLayout(G.mapPos);
+    if (inp.taps.some(([x, y]) => onBack(L.back, x, y))) { AU.sfx('blip'); openSelect(); return; }   // (‹ back to the characters)
     for (const dx of inp.swipes) {                              // (a long swipe: more than one; the row carries on from where the finger left it)
       i = clamp(i - Math.sign(dx) * Math.max(1, Math.round(Math.abs(dx) / L.step)), 0, list.length - 1);
       G.mapPos = clamp(G.mapPos - dx / L.step, -0.4, list.length - 0.6);
@@ -257,6 +262,7 @@
         if (G.mode === 'maps') { mapsInput(inp, dt); break; }
         const n = SkiChars.list.length, SL = HUD.selectLayout();
         let i = G.sel, go = inp.confirm;
+        if (inp.taps.some(([x, y]) => onBack(SL.back, x, y))) { AU.sfx('blip'); backToTitle(); break; }   // (‹ back to the title)
         if (inp.nav.left) i = (i + n - 1) % n;
         if (inp.nav.right) i = (i + 1) % n;
         if (inp.nav.up && i >= 4) i -= 4;

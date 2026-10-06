@@ -51,6 +51,17 @@
     arrows(b.x, b.y, b.w, b.h, k, t);
   }
 
+  // ← back to the screen before (the character select / the title), left of the screen's heading: a phone has no Esc
+  const backLayout = gx => { const r = D.P ? 56 : 50, cx = gx + r, cy = D.P ? 158 : 146; return { id: 'back', cx, cy, r, x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, hx: gx + 2 * r + 30 }; };
+  function backButton(b, k) {
+    const g = D.ctx;
+    g.save(); g.translate(b.cx, b.cy); g.scale(1 + 0.08 * E.out(k), 1 + 0.08 * E.out(k));
+    g.fillStyle = k > 0 ? D.C.orange : 'rgba(13,49,112,0.82)'; g.beginPath(); g.arc(0, 0, b.r, 0, 7); g.fill();
+    const s = b.r * 0.36; g.strokeStyle = '#ffffff'; g.lineWidth = b.r * 0.2; g.lineCap = 'round'; g.lineJoin = 'round';   // (a chevron, like a phone's back)
+    g.beginPath(); g.moveTo(s * 0.45, -s); g.lineTo(-s * 0.55, 0); g.lineTo(s * 0.45, s); g.stroke();
+    g.restore();
+  }
+
   // ------------------------------------------------------------ in-game HUD
   function icons(muted, hk = NOHOVER) {
     const L = layout(), g = D.ctx;
@@ -231,7 +242,8 @@
     // 出發: the only way in by touch (a finger swipes the row; a tap on a card only brings it to the middle). Under the dots
     // in portrait, beside them in landscape (no room under)
     const go = D.P ? { id: 'mapGo', label: '出發', x: W / 2 - 300, y: stripY + 120, w: 600, h: 110 } : { id: 'mapGo', label: '出發', x: W - 80 - 400, y: stripY - 50, w: 400, h: 110 };
-    return { cards, arrows, go, S, cy, gx: D.P ? 60 : 80, stripY, step };
+    const gx = D.P ? 60 : 80;
+    return { cards, arrows, go, back: backLayout(gx), S, cy, gx, stripY, step };
   }
   const STAR = ['...X...', '...X...', '..XXX..', 'XXXXXXX', '.XXXXX.', '..XXX..', '.XX.XX.', '.X...X.'];
   const LOCK = ['..XXXX..', '.X....X.', '.X....X.', 'XXXXXXXX', 'XXXXXXXX', 'XXX..XXX', 'XXX..XXX', 'XXXXXXXX'];
@@ -282,8 +294,9 @@
     g.fillStyle = 'rgba(213,219,232,0.45)';
     for (let x = 0; x < W; x += 48) g.fillRect(x, 0, 2, H);
     for (let y = 0; y < H; y += 48) g.fillRect(0, y, W, 2);
-    D.txt('SELECT COURSE', L.gx, D.P ? 120 : 104, { size: 30, color: D.C.accent, ls: 10 });
-    D.txt('選擇地圖', L.gx, D.P ? 205 : 192, { size: D.P ? 80 : 84, color: D.C.navy });
+    backButton(L.back, hk('back'));
+    D.txt('SELECT COURSE', L.back.hx, D.P ? 120 : 104, { size: 30, color: D.C.accent, ls: 10 });
+    D.txt('選擇地圖', L.back.hx, D.P ? 205 : 192, { size: D.P ? 80 : 84, color: D.C.navy });
     const pop = E.back(seg(o.a, 0, 0.3));
     for (const c of L.cards) {
       const m = list[c.i], sel = c.i === o.sel, k = hk(c.id), shake = sel && o.deny > 0 ? Math.sin(o.deny * 60) * 12 * o.deny : 0;
@@ -339,7 +352,7 @@
     }
     const cards = SkiChars.list.map((c, i) => ({ id: 'card' + i, i, x: gx + (i % 4) * (cw + gap), y: gy + Math.floor(i / 4) * (ch + gap), w: cw, h: ch }));
     const go = { id: 'go', label: '下一步', x: card.x + 40, y: card.y + card.h - 150, w: card.w - 80, h: 110 };
-    return { cards, card, go, gx, n };
+    return { cards, card, go, back: backLayout(gx), gx, n };
   }
   const blinkAt = (t, k) => ((t + k * 0.61) % 3.3) < 0.16;
   function select(o) {                                            // o: { sel, t, a (seconds on this screen), hk, touch }
@@ -348,8 +361,9 @@
     g.fillStyle = 'rgba(213,219,232,0.5)';
     for (let x = 0; x < W; x += 48) g.fillRect(x, 0, 2, H);
     for (let y = 0; y < H; y += 48) g.fillRect(0, y, W, 2);
-    D.txt('SELECT YOUR SKIER', L.gx, D.P ? 120 : 104, { size: D.P ? 30 : 30, color: D.C.accent, ls: 10 });
-    D.txt('選擇角色', L.gx, D.P ? 205 : 192, { size: D.P ? 80 : 84, color: D.C.navy });
+    backButton(L.back, hk('back'));
+    D.txt('SELECT YOUR SKIER', L.back.hx, D.P ? 120 : 104, { size: D.P ? 30 : 30, color: D.C.accent, ls: 10 });
+    D.txt('選擇角色', L.back.hx, D.P ? 205 : 192, { size: D.P ? 80 : 84, color: D.C.navy });
     L.cards.forEach(c => {
       const sel = c.i === o.sel, k = hk(c.id), pop = E.back(seg(o.a, c.i * 0.03, c.i * 0.03 + 0.25));
       if (pop <= 0) return;

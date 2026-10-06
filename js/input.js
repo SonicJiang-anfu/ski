@@ -80,6 +80,9 @@
     };
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); canvas.addEventListener('lostpointercapture', e => { if (padOf.has(e.pointerId)) up(e); });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
+    // a finger held on a pad is a long press to Android, which buzzes the phone for it: the game's own touches are
+    // not the browser's (the pointer events above still come)
+    canvas.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
     canvas.addEventListener('touchend', gesture, { passive: true });      // older iOS only counts touchend
 
     // the controls as the game sees them this frame; edges (jump, pause, ...) are consumed
