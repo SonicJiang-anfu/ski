@@ -43,7 +43,7 @@
     best: 0, result: null, demo: null, demoBot: null, demoCam: WD.newCam(), bot: null, anje: null, beeps: 0, ticks: 0, slow: 1,
     botPlay: params.has('bot'),
   };
-  const setMode = m => { G.mode = m; G.modeT = 0; };
+  const setMode = m => { G.mode = m; G.modeT = 0; input.clear(); };   // (a finger already down when the screen changes taps nothing on the new one)
   function newRun() {
     const m = MAP();
     G.s = PH.create(m.course); G.cam = WD.newCam(); G.trail = []; G.pops = []; WD.parts.length = 0; G.beeps = 0; G.slow = 1;
@@ -164,7 +164,7 @@
     const { x, y } = input.mouse, L = HUD.layout();
     if (G.mode === 'count' || G.mode === 'play' || G.mode === 'resume') return near(L.pause, x, y) ? 'pause' : near(L.mute, x, y) ? 'mute' : null;
     if (G.mode === 'pause') { const b = HUD.pauseButtons().find(b => hit(b, x, y)); return b ? b.id : null; }
-    if (G.mode === 'maps') { const L = HUD.mapLayout(G.mapPos), a = L.arrows.find(a => Math.hypot(x - a.cx, y - a.cy) < a.r * 1.3), c = [...L.cards].reverse().find(c => hit(c, x, y)); return a ? a.id : c ? c.id : null; }
+    if (G.mode === 'maps') { const L = HUD.mapLayout(G.mapPos), a = L.arrows.find(a => Math.hypot(x - a.cx, y - a.cy) < a.r * 1.3), c = [...L.cards].reverse().find(c => hit(c, x, y)); return hit(L.go, x, y) ? 'mapGo' : a ? a.id : c ? c.id : null; }
     if (G.mode === 'select') { const SL = HUD.selectLayout(), c = SL.cards.find(c => hit(c, x, y)); return c ? c.id : hit(SL.go, x, y) ? 'go' : null; }
     if (G.mode === 'result' && G.modeT > 3.6) { const b = HUD.resultButtons().find(b => hit(b, x, y)); return b ? b.id : null; }
     return null;
@@ -201,11 +201,14 @@
     if (G.mode === 'play' || G.mode === 'count' || G.mode === 'resume') { G.paused = G.mode === 'resume' ? 'play' : G.mode; setMode('pause'); G.focus = 'resume'; AU.sfx('blip'); AU.pauseMusic(true); }
   }
 
-  // the map screen (after the character): a row of cards, ← → (or ↑ ↓) slide to the next one; a click or tap on the
-  // middle card (or Enter) starts it, on a card to the side brings it to the middle; a map that is not made yet only shakes its head
+  // the map screen (after the character): a row of cards, ← → (or ↑ ↓) slide to the next one, and so does a finger
+  // swiped across (the row follows it while it is down); the 出發 button (or Enter, or a mouse click on the middle card)
+  // starts it; a tap on a card to the side brings it to the middle, a tap on the middle one does nothing (a phone's
+  // swipes started there too often); a map that is not made yet only shakes its head
   // ← or → held down keeps sliding: after a moment, a card every so often. While it slides the background stays put (a
   // map skied behind the cards first has its line planned, a moment's work); it catches up once the key is let go
   const HOLD_WAIT = 0.35, HOLD_EVERY = 0.12;
+  const mapPosShown = () => { const d = input.drag(); return d && G.mode === 'maps' ? clamp(G.mapPos - d.dx / HUD.mapLayout(G.mapPos).step, -0.4, SkiMaps.list.length - 0.6) : G.mapPos; };   // (the row under a finger follows it)
   function mapsInput(inp, dt) {
     const list = SkiMaps.list;
     let i = G.mapSel, go = inp.confirm;
@@ -216,10 +219,15 @@
     if (!dir || dir !== G.holdDir || inp.nav.left || inp.nav.right) { G.holdDir = dir; G.holdT = 0; if (G.slid) { G.slid = false; if (list[i].ready && list[i].id !== G.demoMap) newDemo(list[i].id); } }
     else if ((G.holdT += dt) >= HOLD_WAIT) { G.holdT -= HOLD_EVERY; i = clamp(i + dir, 0, list.length - 1); sliding = G.slid = true; }
     const L = HUD.mapLayout(G.mapPos);
+    for (const dx of inp.swipes) {                              // (a long swipe: more than one; the row carries on from where the finger left it)
+      i = clamp(i - Math.sign(dx) * Math.max(1, Math.round(Math.abs(dx) / L.step)), 0, list.length - 1);
+      G.mapPos = clamp(G.mapPos - dx / L.step, -0.4, list.length - 0.6);
+    }
     for (const [x, y] of inp.taps) {
       const a = L.arrows.find(a => Math.hypot(x - a.cx, y - a.cy) < a.r * 1.3), c = [...L.cards].reverse().find(c => hit(c, x, y));
-      if (a) i = clamp(i + a.dir, 0, list.length - 1);
-      else if (c && c.i === G.mapSel) go = true;
+      if (hit(L.go, x, y)) go = true;
+      else if (a) i = clamp(i + a.dir, 0, list.length - 1);
+      else if (c && c.i === G.mapSel) { if (!input.touch) go = true; }
       else if (c) i = c.i;
     }
     if (i !== G.mapSel) { G.mapSel = i; AU.sfx('blip'); if (!sliding && list[i].ready && list[i].id !== G.demoMap) newDemo(list[i].id); }
@@ -380,7 +388,7 @@
     }
     if (G.mode === 'pause') HUD.pause(input.touch, hk, G.t);
     if (G.mode === 'title') HUD.title({ t: G.t, touch: input.touch });
-    if (G.mode === 'maps') { const best = {}; SkiMaps.ready().forEach(m => { best[m.id] = bestOf(m); }); HUD.mapSelect({ sel: G.mapSel, pos: G.mapPos, t: G.t, a: G.modeT, hk, touch: input.touch, best, deny: G.deny }); }
+    if (G.mode === 'maps') { const best = {}; SkiMaps.ready().forEach(m => { best[m.id] = bestOf(m); }); HUD.mapSelect({ sel: G.mapSel, pos: mapPosShown(), t: G.t, a: G.modeT, hk, touch: input.touch, best, deny: G.deny }); }
     if (G.mode === 'select') HUD.select({ sel: G.sel, t: G.t, a: G.modeT, hk, touch: input.touch });
     if (G.mode === 'result') { HUD.result(G.result, G.modeT, input.touch, hk); }
     if (G.flash > 0) D.rect(0, 0, D.W, D.H, '#ffffff', G.flash);

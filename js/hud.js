@@ -203,7 +203,11 @@
     const ay = cy, ar = D.P ? 58 : 50, ax = D.P ? 70 : W / 2 - S.w / 2 - 90;
     const arrows = [{ id: 'mapL', dir: -1, x: ax - ar, y: ay - ar, w: ar * 2, h: ar * 2, cx: ax, cy: ay, r: ar },
       { id: 'mapR', dir: 1, x: W - ax - ar, y: ay - ar, w: ar * 2, h: ar * 2, cx: W - ax, cy: ay, r: ar }];
-    return { cards, arrows, S, cy, gx: D.P ? 60 : 80, stripY: cy + S.h / 2 + (D.P ? 90 : 62) };
+    const stripY = cy + S.h / 2 + (D.P ? 90 : 62);
+    // 出發: the only way in by touch (a finger swipes the row; a tap on a card only brings it to the middle). Under the dots
+    // in portrait, beside them in landscape (no room under)
+    const go = D.P ? { id: 'mapGo', label: '出發', x: W / 2 - 300, y: stripY + 120, w: 600, h: 110 } : { id: 'mapGo', label: '出發', x: W - 80 - 400, y: stripY - 50, w: 400, h: 110 };
+    return { cards, arrows, go, S, cy, gx: D.P ? 60 : 80, stripY, step };
   }
   const STAR = ['...X...', '...X...', '..XXX..', 'XXXXXXX', '.XXXXX.', '..XXX..', '.XX.XX.', '.X...X.'];
   const LOCK = ['..XXXX..', '.X....X.', '.X....X.', 'XXXXXXXX', 'XXXXXXXX', 'XXX..XXX', 'XXX..XXX', 'XXXXXXXX'];
@@ -279,7 +283,10 @@
       });
       x += tw[ti] + tgap;
     });
-    if (!o.touch) D.txt('← → 選擇　Enter 出發　Esc 返回', W / 2, H - 28, { size: 24, color: D.C.muted, align: 'center' });
+    const ready = list[o.sel] && list[o.sel].ready;
+    D.ctx.save(); if (!ready) D.ctx.globalAlpha *= 0.45; button(L.go, hk('mapGo'), o.t, true); D.ctx.restore();
+    if (!o.touch) D.txt('← → 選擇　Enter 出發　Esc 返回', D.P ? W / 2 : L.gx, H - 28, { size: 24, color: D.C.muted, align: D.P ? 'center' : 'left' });
+    else D.txt('左右滑動選擇地圖', D.P ? W / 2 : L.gx, H - 28, { size: 26, color: D.C.muted, align: D.P ? 'center' : 'left' });
   }
 
   // ------------------------------------------------------------ character select (the trailer's "選擇你的嚮導" page)
