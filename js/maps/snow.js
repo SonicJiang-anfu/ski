@@ -97,13 +97,14 @@
   const BANK = [0.7, 0.85, 1.4, 2.4];                          // snow wall: inner foot→top edge (x, y), top width, outer foot
   const LIFT_X = -(course.HALF + 12);                          // chairlift up the left side, as in the trailer
   const LIFT = { half: 1.4, h: 9, towers: [] };
-  for (let z = -6; z < course.LENGTH + 140; z += 16) LIFT.towers.push(z);
+  for (let z = -6; z < 1528; z += 16) LIFT.towers.push(z);   // (down to its bottom station by the finish)
+  const inVillage = (z, x) => z > 1456 && z < 1600 && Math.abs(x) < 29;   // (round the finish: 暖爐山屋 and its cabins, no pines)
   const TREES = (() => {                                       // pines either side of the course
     const r = rng(606), out = [];
     for (let z = -12; z < course.LENGTH + 140; z += 3.2) for (const sd of [-1, 1]) for (let k = 0; k < 2; k++) {
       if (r() >= 0.8) continue;
       const x = sd * (course.HALF + 4 + k * 9 + r() * 7), zz = z + r() * 2, h = 3.2 + r() * 2.4;
-      if (Math.abs(x - LIFT_X) > 2.6) out.push({ x, z: zz, h });
+      if (Math.abs(x - LIFT_X) > 2.6 && !inVillage(zz, x)) out.push({ x, z: zz, h });
     }
     return out.sort((a, b) => a.z - b.z);
   })();
@@ -155,6 +156,90 @@
     return lerp(course.height(za), course.height(zb), f) + LIFT.h - 0.2 - 0.9 * Math.sin(Math.PI * f);
   };
 
+  // ---- the finish: 暖爐山屋, the lodge at the foot of the slope. The run-out ends at its deck (a fire, skis stuck in the
+  // snow, lights along the eaves); cabins behind the stands either side (seen in the finish shot, which looks back across
+  // her), and the chairlift's bottom station. No pines in the village
+  const LODGE = { z: 1548, d: 14, hw: 12, wall: 5, ridge: 13 };
+  const CABINS = [{ x: -15, z: 1486, sign: '熱可可' }, { x: -15.5, z: 1508 }, { x: 15.5, z: 1474, sign: '雪具出租' }, { x: 16, z: 1496 }, { x: 15.5, z: 1517, sign: '滑雪學校' }];
+  const WOOD = { wall: '#9a6238', side: '#7a4a2a', trim: '#4a2e1a', snow: '#f4f8ff', snowS: '#dfe8f5', glow: '#ffd27a', glowD: '#f0a040' };
+  function lit(D, cam, X, y, z, w, h) {                          // a window lit from inside, on a face at z (facing up the slope)
+    const q = (x0, y0, x1, y1, dz, col) => D.poly3(cam, [[x0, y0, z - dz], [x1, y0, z - dz], [x1, y1, z - dz], [x0, y1, z - dz]], col);
+    q(X - w / 2 - 0.12, y - 0.12, X + w / 2 + 0.12, y + h + 0.12, 0, WOOD.trim);
+    q(X - w / 2, y, X + w / 2, y + h, 0.01, WOOD.glow);
+    q(X - 0.04, y, X + 0.04, y + h, 0.02, WOOD.trim);
+    q(X - w / 2, y + h / 2 - 0.04, X + w / 2, y + h / 2 + 0.04, 0.02, WOOD.trim);
+  }
+  // a log chalet: walls, a gable facing up the slope, a steep roof under snow, maybe a chimney smoking; on the slope its
+  // front stands on a stone footing. o: { wins (window x offsets), sign, chimney, lights }
+  function chalet(D, R, X, z0, d, hw, wall, ridge, o = {}) {
+    const { cam, t } = R, yb = course.height(z0 + d), yf = course.height(z0), g = D.ctx;
+    if (yf > yb + 0.05) D.box3(cam, X - hw - 0.2, X + hw + 0.2, yb - 0.3, yf + 0.15, z0 - 0.2, z0 + d + 0.2, { side: '#8a8f9a', rear: '#a4a9b4', top: '#b8bdc8' });
+    const y0 = Math.max(yf, yb), ew = y0 + wall, top = y0 + ridge, ov = 0.7;
+    D.box3(cam, X - hw, X + hw, y0, ew, z0, z0 + d, { side: WOOD.side, rear: WOOD.wall, top: WOOD.wall });
+    for (let k = 1; k < 5; k++) { const yy = y0 + wall * k / 5; D.poly3(cam, [[X - hw, yy, z0 - 0.01], [X + hw, yy, z0 - 0.01], [X + hw, yy + 0.06, z0 - 0.01], [X - hw, yy + 0.06, z0 - 0.01]], WOOD.side, 1, [0, 0, -1]); }   // (the logs)
+    D.poly3(cam, [[X - hw, ew, z0], [X + hw, ew, z0], [X, top, z0]], WOOD.wall, 1, [0, 0, -1]);                 // the gable
+    D.poly3(cam, [[X - hw, ew, z0 + d], [X + hw, ew, z0 + d], [X, top, z0 + d]], WOOD.side, 1, [0, 0, 1]);
+    if (o.chimney) {                                               // (behind the roof's near slope: drawn first)
+      const cx = X + hw * 0.45, cz = z0 + d * 0.6;
+      D.box3(cam, cx - 0.6, cx + 0.6, ew, top + 0.8, cz - 0.6, cz + 0.6, { side: '#8a8f9a', rear: '#a4a9b4', top: '#5a5f6a' });
+      for (let k = 0; k < 5; k++) {                                // smoke, drifting up and away
+        const ph = (t * 0.35 + k / 5) % 1, q = D.toCam(cam, [cx + ph * 2.4, top + 1.2 + ph * 6, cz]);
+        if (q[2] < 1) continue;
+        const [sx, sy] = D.scr(cam, q), rr = cam.F / q[2] * (0.6 + ph * 1.4);
+        g.save(); g.globalAlpha *= 0.55 * (1 - ph); g.fillStyle = '#eef2f8'; g.beginPath(); g.arc(sx, sy, rr, 0, 7); g.fill(); g.restore();
+      }
+    }
+    for (const sd of [-1, 1]) {                                    // the roof: snow on top, dark wood along its front edge
+      const ex = X + sd * (hw + ov), ey = ew - 0.5, n = [sd * (ridge - wall), hw + ov, 0];
+      D.poly3(cam, [[ex, ey, z0 - ov], [X, top + 0.25, z0 - ov], [X, top + 0.25, z0 + d + ov], [ex, ey, z0 + d + ov]], WOOD.snow, 1, n);
+      D.poly3(cam, [[ex, ey, z0 - ov], [X, top + 0.25, z0 - ov], [X, top - 0.25, z0 - ov], [ex, ey - 0.45, z0 - ov]], WOOD.trim, 1, [0, 0, -1]);
+      D.poly3(cam, [[ex, ey - 0.45, z0 - ov], [ex, ey, z0 - ov], [ex, ey, z0 + d + ov], [ex, ey - 0.45, z0 + d + ov]], WOOD.snowS, 1, [sd, 0, 0]);
+    }
+    const f = z0 - 0.02;                                           // the front: the door, windows lit, the sign over the door
+    const q = (x0, y0_, x1, y1, dz, col) => D.poly3(cam, [[x0, y0_, f - dz], [x1, y0_, f - dz], [x1, y1, f - dz], [x0, y1, f - dz]], col, 1, [0, 0, -1]);
+    q(X - 0.9, y0, X + 0.9, y0 + 2.3, 0, WOOD.trim); q(X - 0.7, y0, X + 0.7, y0 + 2.1, 0.01, WOOD.glowD);
+    if (cam.C[2] < z0) {
+      for (const wx_ of o.wins || [-hw * 0.55, hw * 0.55]) lit(D, cam, X + wx_, y0 + 1.2, f, Math.min(1.6, hw * 0.35), 1.3);
+      if (ridge - wall > 3.5) lit(D, cam, X, ew + (ridge - wall) * 0.25, f, Math.min(2.4, hw * 0.4), (ridge - wall) * 0.35);   // (up in the gable)
+      if (o.sign) {
+        const big = !!o.chimney, sw = big ? 9 : Math.min(hw * 1.6, 1.25 * o.sign.length + 1.2), sh = big ? 1.8 : 0.8, sy = y0 + 2.55;   // (the lodge's own: big enough to read from up the slope)
+        q(X - sw / 2, sy, X + sw / 2, sy + sh, 0.03, WOOD.trim);
+        D.print(cam, [X - sw / 2, sy + sh, f - 0.05], [X + sw / 2, sy + sh, f - 0.05], [X - sw / 2, sy, f - 0.05], o.sign, { w: sw, h: sh, color: '#ffe6b0', fill: 0.78 });
+      }
+    }
+    if (o.lights) {                                                // a string of lights along the gable's edges
+      const cols = ['#ff5a5a', '#ffd84a', '#5ad1ff', '#7aff8a'];
+      for (const sd of [-1, 1]) for (let k = 0; k <= 12; k++) {
+        const u = k / 12, p = D.toCam(cam, [lerp(X + sd * (hw + ov), X, u), lerp(ew - 0.7, top, u) - 0.15, z0 - ov - 0.05]);
+        if (p[2] < 1) continue;
+        const [sx, sy] = D.scr(cam, p), s = Math.max(2, cam.F / p[2] * 0.14), on = (Math.floor(t * 3) + k) % 4 !== 0;
+        g.save(); g.globalAlpha *= on ? 1 : 0.35; g.fillStyle = cols[(k + (sd > 0 ? 2 : 0)) % 4]; g.fillRect(sx - s, sy - s, s * 2, s * 2); g.restore();
+      }
+    }
+  }
+  function lodgeDeck(D, R) {                                       // before the lodge: a deck with a rail, a fire, skis stuck in the snow
+    const { cam, t } = R, z0 = LODGE.z - 6, z1 = LODGE.z, y = course.height(z1), g = D.ctx, hw = LODGE.hw - 1;
+    D.box3(cam, -hw, hw, y, y + 0.35, z0, z1, { side: WOOD.side, rear: WOOD.side, top: '#c98a55' });
+    for (let x = -hw; x <= hw + 1e-6; x += 2) if (Math.abs(x) > 1.6) D.box3(cam, x - 0.1, x + 0.1, y + 0.35, y + 1.3, z0 - 0.1, z0 + 0.1, { side: WOOD.trim, rear: WOOD.trim, top: WOOD.wall });
+    for (const sd of [-1, 1]) D.poly3(cam, [[sd * 1.6, y + 1.15, z0 - 0.11], [sd * hw, y + 1.15, z0 - 0.11], [sd * hw, y + 1.3, z0 - 0.11], [sd * 1.6, y + 1.3, z0 - 0.11]], WOOD.wall);
+    const fx = -4.5, fz = z0 - 3;                                  // the fire: a ring of stones, a glow, flames
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, X = fx + Math.cos(a) * 1.1, Z = fz + Math.sin(a) * 0.7; D.box3(cam, X - 0.25, X + 0.25, y, y + 0.35, Z - 0.2, Z + 0.2, { side: '#7a7f8a', rear: '#8a8f9a', top: '#a4a9b4' }); }
+    const q = D.toCam(cam, [fx, y + 0.8, fz]);
+    if (q[2] > 1) { const [sx, sy] = D.scr(cam, q), rr = cam.F / q[2] * 2.2; g.save(); g.globalAlpha *= 0.3 + 0.08 * Math.sin(t * 13); g.fillStyle = '#ffb040'; g.beginPath(); g.arc(sx, sy, rr, 0, 7); g.fill(); g.restore(); }
+    for (let k = 0; k < 3; k++) { const fl = 1 + 0.25 * Math.sin(t * 17 + k * 2), X = fx + (k - 1) * 0.35; D.poly3(cam, [[X - 0.3, y + 0.3, fz - 0.05 * k], [X + 0.3, y + 0.3, fz - 0.05 * k], [X, y + 0.3 + 1.2 * fl * (k === 1 ? 1.3 : 1), fz - 0.05 * k]], k === 1 ? '#ffd84a' : '#ff7a1a'); }
+    [['#f05416', 5.2], ['#2a6fd6', 5.7], ['#ffd84a', 6.4], ['#e0413a', 6.9]].forEach(([col, X], k) => {   // skis and boards stuck upright in the snow
+      const Z = z0 - 2.5 - (k % 2) * 0.4; D.box3(cam, X - 0.13, X + 0.13, y - 0.2, y + 1.8, Z - 0.05, Z + 0.05, { side: col, rear: col, top: '#ffffff' });
+    });
+  }
+  function liftStation(D, R) {                                     // where the chairlift comes down: a hut, and the wheel the cable turns round
+    const { cam } = R, zw = LIFT.towers[LIFT.towers.length - 1] + 8, X = LIFT_X, y = course.height(zw), wy = y + LIFT.h - 0.6, pts = [];
+    D.box3(cam, X - 0.2, X + 0.2, y, wy, zw - 0.2, zw + 0.2, { side: '#6f7890', rear: '#8a93a8', top: '#a4acbf' });
+    for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; pts.push([X + Math.cos(a) * LIFT.half, wy, zw + Math.sin(a) * LIFT.half]); }
+    D.poly3(cam, pts, '#5b6477');
+    chalet(D, R, X, zw + 2, 7, 2.8, 3.4, 6, { wins: [-1.5, 1.5], sign: '纜車' });
+  }
+
+  const GOAL_SIGN = 'GOAL 暖爐山屋';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#ffffff', '#c6d8f2'], trail: '#cfdcef', ski: ['#f05416', '#ff965a', '#d8480f'],
     kicker: { side: '#c4d3ea', top: '#e3edfb', edge: '#f05416' },
@@ -205,6 +290,15 @@
       const D = root.SkiDraw, { cam, add, lo, hi, zc, wx, t } = R;
       // the other mascots cheering on wooden stands (snow on them) either side of the finish
       if (R.zc > 1500 - 160) root.SkiWorld.crowd(R, { z0: 1450, z1: 1525, stand: { top: '#f4f8ff', top2: '#e6eef8', face: '#9a6a3a' } });
+      if (R.zc > 1360) {                                           // 暖爐山屋 past the finish, its cabins behind the stands, the lift's bottom station
+        {                                                          // (seen from far up the slope, past where the course is drawn: the snow beyond is the sky's ground colour)
+          add(LODGE.z + LODGE.d / 2, () => chalet(D, R, 0, LODGE.z, LODGE.d, LODGE.hw, LODGE.wall, LODGE.ridge, { sign: '暖爐山屋', chimney: true, lights: true, wins: [-8.5, -4.5, 4.5, 8.5] }), false, 0);
+          add(LODGE.z - 3, () => lodgeDeck(D, R), false, 0);
+        }
+        for (const c of CABINS) if (c.z > lo - 10 && c.z < hi + 10) add(c.z + 3, () => chalet(D, R, c.x, c.z, 6, 2.6, 3, 5.4, { sign: c.sign, wins: [-1.5, 1.5] }), false, c.x);
+        const zs = LIFT.towers[LIFT.towers.length - 1] + 8;
+        if (zs > lo - 10 && zs < hi + 10) add(zs + 4, () => liftStation(D, R), false, LIFT_X);
+      }
       for (const tr of TREES) {
         if (tr.z < lo || tr.z > hi || (Math.abs(tr.z - zc) > 70 && Math.abs(tr.x) > course.HALF + 12)) continue;   // the outer row fades out first
         add(tr.z, () => pine(D, cam, wx(tr.z, tr.x), tr.z, course.height(tr.z), tr.h, Math.abs(tr.z - zc) > 45));
@@ -228,7 +322,7 @@
       for (const dir of [1, -1]) for (let k = 0; ; k++) {          // chairs ride up the course side, come back on the far side
         const z = Math.floor(lo / 11) * 11 + k * 11 + ((dir * t * 2.2) % 11 + 11) % 11 - 11;
         if (z > hi) break;
-        if (z < lo || Math.abs(z - zc) > 80) continue;
+        if (z < lo || Math.abs(z - zc) > 80 || z > LIFT.towers[LIFT.towers.length - 1]) continue;
         const x = wx(z, LIFT_X) + (dir > 0 ? LIFT.half : -LIFT.half), yc = liftCable(z);
         if (Math.abs(z - zc) > 35) { add(z, () => D.poly3(cam, [[x - 0.55, yc - 1.5, z], [x + 0.55, yc - 1.5, z], [x + 0.55, yc - 0.75, z], [x - 0.55, yc - 0.75, z]], '#2a6fd6')); continue; }
         add(z, () => {
@@ -247,8 +341,7 @@
       const f = D.poly3(cam, [P3(z, -x, y0 - h), P3(z, x, y0 - h), P3(z, x, y1 - h), P3(z, -x, y1 - h)], col);
       D.poly3(cam, [P3(z - 0.01, -x, y0 - h), P3(z - 0.01, x, y0 - h), P3(z - 0.01, x, y0 - h + 0.18), P3(z - 0.01, -x, y0 - h + 0.18)], '#ffffff');
       if (f && label) {
-        const q = D.toCam(cam, P3(z, 0, (y0 + y1) / 2 - h));
-        if (q[2] > 1) { const [sx, sy] = D.scr(cam, q), s2 = cam.F / q[2]; D.txt(label, sx, sy + s2 * 0.42, { size: Math.round(s2 * 1.15), color: '#ffffff', align: 'center', ls: Math.round(s2 * 0.1) }); }
+        D.print(cam, P3(z - 0.02, -x, y1 - h), P3(z - 0.02, x, y1 - h), P3(z - 0.02, -x, y0 + 0.18 - h), label === 'GOAL' ? GOAL_SIGN : label, { w: 2 * x, h: y1 - y0 - 0.18 });   // (printed on the banner: it leans with it)
       }
     },
     obstacle(R, o, i) {

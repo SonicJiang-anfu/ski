@@ -311,6 +311,73 @@
     }
   }
 
+  // ---- the finish: 浪花泳池, the wave pool the slide drops into. Waves roll in from the wave house across its far end
+  // (its name on top, a great wave painted on it), rings bob on the water, lifeguards watch from their chairs; behind the
+  // stands either side (the finish shot looks across her at them) umbrellas, loungers, palms and an ice-cream kiosk
+  const WAVEH = { z: FINISH + 56, d: 6, h: 7.5 };
+  const BEACH = (() => {
+    const r = rng(7070), umbs = [], loungers = [], palms = [], rings = [];
+    for (const sd of [-1, 1]) for (let z = FINISH - 14; z < FINISH + 54; z += 7 + r() * 3) {
+      const x = sd * (26 + r() * 6);
+      if (sd > 0 && Math.abs(z - (FINISH + 20)) < 7 && x < 31) continue;   // (the kiosk)
+      umbs.push({ z, x, col: ['#e8413a', '#2f86e0', '#f2a72e', '#27b07a'][(r() * 4) | 0] });
+      loungers.push({ z: z + 1.6, x: x - sd * 1.6, col: r() < 0.5 ? '#2f86e0' : '#e8508e' });
+      if (r() < 0.6) palms.push({ z: z + 3.5, x: sd * (34 + r() * 5), h: 6 + r() * 3, lean: sd * (0.6 + r() * 1.2) });
+    }
+    for (let k = 0; k < 9; k++) { const sd = k % 2 ? 1 : -1; rings.push({ z: FINISH + 8 + k * 5 + r() * 3, x: sd * (9 + r() * 6), ph: r() * 6 }); }
+    return { umbs, loungers, palms: palms.sort((a, b) => a.z - b.z), rings };
+  })();
+  function waveHouse(D, R) {                                       // across the pool's far end: where the waves come from
+    const { cam, t } = R, z = WAVEH.z, y = course.height(z), hw = POOL_W + 1.5, h = WAVEH.h, f = z - 0.02;
+    D.box3(cam, -hw, hw, y - 0.3, y + h, z, z + WAVEH.d, { side: '#d8e8f2', rear: '#f4fbff', top: '#ffffff' });
+    D.box3(cam, -hw - 0.4, hw + 0.4, y + h, y + h + 0.5, z - 0.4, z + WAVEH.d, { side: '#2f86e0', rear: '#2f86e0', top: '#5aa8f0' });   // (a blue cornice)
+    if (cam.C[2] > z) return;
+    for (let k = 0; k < 8; k++) {                                  // the grilles the waves come out of, at the waterline
+      const x0 = lerp(-hw + 1, hw - 1, k / 8) + 0.3, x1 = lerp(-hw + 1, hw - 1, (k + 1) / 8) - 0.3;
+      D.poly3(cam, [[x0, y - 0.1, f], [x1, y - 0.1, f], [x1, y + 1.1, f], [x0, y + 1.1, f]], '#1e4f8a');
+    }
+    const wave = (cx, s, col) => {                                 // a painted wave: a swell curling over, foam on its lip
+      const pts = [];
+      for (let k = 0; k <= 12; k++) { const u = k / 12; pts.push([cx - 4 * s + 8 * s * u, y + 1.8 + s * (Math.sin(u * Math.PI) * 2.6 + u * 0.8), f - 0.01]); }
+      pts.push([cx + 4 * s, y + 1.6, f - 0.01], [cx - 4 * s, y + 1.6, f - 0.01]);
+      D.poly3(cam, pts, col);
+      for (let k = 0; k < 4; k++) { const u = 0.45 + k * 0.12, X = cx - 4 * s + 8 * s * u, Y = y + 1.8 + s * (Math.sin(u * Math.PI) * 2.6 + u * 0.8); D.poly3(cam, [[X - 0.5 * s, Y, f - 0.02], [X + 0.5 * s, Y, f - 0.02], [X + 0.2 * s, Y + 0.5 * s, f - 0.02]], '#ffffff'); }
+    };
+    wave(-9, 1.1, '#5cc8f2'); wave(9, 1.1, '#5cc8f2'); wave(0, 1.4, '#2f86e0');
+    const sw = 16, sy = y + h + 0.5, sh = 3;                       // the name on top, a board on two legs
+    for (const sd of [-1, 1]) D.box3(cam, sd * 5 - 0.2, sd * 5 + 0.2, sy, sy + 0.8, z + 1.8, z + 2.2, { side: '#9aa8b8', rear: '#b8c4d2', top: '#ffffff' });
+    D.poly3(cam, [[-sw / 2, sy + 0.8, z + 1.6], [sw / 2, sy + 0.8, z + 1.6], [sw / 2, sy + 0.8 + sh, z + 1.6], [-sw / 2, sy + 0.8 + sh, z + 1.6]], '#2f86e0');
+    D.poly3(cam, [[-sw / 2, sy + 0.8, z + 1.58], [sw / 2, sy + 0.8, z + 1.58], [sw / 2, sy + 1.05, z + 1.58], [-sw / 2, sy + 1.05, z + 1.58]], '#ffd84a');
+    D.print(cam, [-sw / 2, sy + 0.8 + sh, z + 1.56], [sw / 2, sy + 0.8 + sh, z + 1.56], [-sw / 2, sy + 1.05, z + 1.56], '浪花泳池', { w: sw, h: sh - 0.25, color: '#ffffff', stroke: '#1e4f8a', fill: 0.78 });
+    void t;
+  }
+  function lifeguard(D, R, X, z) {                                 // a lifeguard's tall chair: white legs, a red seat, a sunshade
+    const { cam } = R, y = course.height(z), top = y + 3.4;
+    for (const [dx, dz] of [[-0.6, -0.5], [0.6, -0.5], [-0.6, 0.5], [0.6, 0.5]]) D.box3(cam, X + dx - 0.08, X + dx + 0.08, y, top, z + dz - 0.08, z + dz + 0.08, { side: '#e6edf5', rear: '#ffffff', top: '#ffffff' });
+    D.box3(cam, X - 0.7, X + 0.7, top, top + 0.25, z - 0.6, z + 0.6, { side: '#c82e28', rear: '#e8413a', top: '#e8413a' });
+    D.box3(cam, X - 0.7, X + 0.7, top + 0.25, top + 1.2, z + 0.45, z + 0.6, { side: '#c82e28', rear: '#e8413a', top: '#e8413a' });
+    D.box3(cam, X - 0.05, X + 0.05, top, top + 2.6, z + 0.5, z + 0.6, { side: '#9aa8b8', rear: '#9aa8b8', top: '#9aa8b8' });
+    D.poly3(cam, [[X - 1.4, top + 2.4, z - 0.6], [X + 1.4, top + 2.4, z - 0.6], [X, top + 3, z + 0.5]], '#ffd84a');
+    D.poly3(cam, [[X - 1.4, top + 2.4, z - 0.6], [X, top + 3, z + 0.5], [X - 1.4, top + 2.4, z + 1.6]], '#f2a72e');
+    D.poly3(cam, [[X + 1.4, top + 2.4, z - 0.6], [X, top + 3, z + 0.5], [X + 1.4, top + 2.4, z + 1.6]], '#f2a72e');
+  }
+  function lounger(D, R, X, z, col) {                              // a sun lounger: a white frame, a coloured cushion, its back raised
+    const { cam } = R, y = course.height(z);
+    D.box3(cam, X - 0.5, X + 0.5, y + 0.3, y + 0.45, z - 1, z + 0.6, { side: '#e6edf5', rear: '#ffffff', top: col });
+    D.poly3(cam, [[X - 0.5, y + 0.45, z + 0.6], [X + 0.5, y + 0.45, z + 0.6], [X + 0.5, y + 1.3, z + 1.2], [X - 0.5, y + 1.3, z + 1.2]], col);
+  }
+  function kiosk(D, R, X, z) {                                     // an ice-cream kiosk: a little hut, a striped awning, a cone on the roof
+    const { cam } = R, y = course.height(z), hw = 2.4, d = 3.2, f = z - 0.02;
+    D.box3(cam, X - hw, X + hw, y, y + 2.8, z, z + d, { side: '#ffd0e4', rear: '#ffe6f0', top: '#ffffff' });
+    for (let k = 0; k < 6; k++) { const a = lerp(X - hw - 0.3, X + hw + 0.3, k / 6), b = lerp(X - hw - 0.3, X + hw + 0.3, (k + 1) / 6); D.poly3(cam, [[a, y + 2.4, z - 1.4], [b, y + 2.4, z - 1.4], [b, y + 2.9, z], [a, y + 2.9, z]], k % 2 ? '#ffffff' : '#e8508e'); }
+    D.poly3(cam, [[X - hw + 0.4, y + 1, f], [X + hw - 0.4, y + 1, f], [X + hw - 0.4, y + 2.1, f], [X - hw + 0.4, y + 2.1, f]], '#5a3a6a');
+    const cy = y + 2.8; D.poly3(cam, [[X - 0.6, cy + 1.2, z + 1.6], [X + 0.6, cy + 1.2, z + 1.6], [X, cy, z + 1.6]], '#e0a868');   // the cone
+    const q = D.toCam(cam, [X, cy + 1.6, z + 1.6]);
+    if (q[2] > 1) { const [sx, sy] = D.scr(cam, q), rr = cam.F / q[2] * 0.75, g = D.ctx; g.fillStyle = '#ffb0d0'; g.beginPath(); g.arc(sx, sy, rr, 0, 7); g.fill(); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(sx - rr * 0.3, sy - rr * 0.3, rr * 0.3, 0, 7); g.fill(); }
+    if (cam.C[2] < z) D.print(cam, [X - hw + 0.4, y + 2.35, f - 1.42], [X + hw - 0.4, y + 2.35, f - 1.42], [X - hw + 0.4, y + 1.7, f - 1.42], '冰品', { w: 2 * hw - 0.8, h: 0.65, color: '#ffffff', stroke: '#c8306a' });
+  }
+
+  const GOAL_SIGN = 'GOAL 浪花泳池';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#ffffff', '#bff2ff', '#7fdcf5'], trail: '#e8fbff', ski: ['#ffc93a', '#fff0a0', '#e09a10'],
     kicker: { side: '#f2a93a', top: '#ffd45a', edge: '#e8413a' }, boost: { pad: '#14d2ff', glow: '#7ff0ff', arrow: '#ffffff' },
@@ -356,6 +423,10 @@
         D.poly3(cam, [P3(z0, -POOL_W - 1, -0.12), P3(z0, POOL_W + 1, -0.12), P3(zb, POOL_W + 1, -0.12), P3(zb, -POOL_W - 1, -0.12)], '#ffffff');
         D.poly3(cam, [P3(z0, -POOL_W, -0.1), P3(z0, POOL_W, -0.1), P3(zb, POOL_W, -0.1), P3(zb, -POOL_W, -0.1)], ((Math.floor(za / 4) % 2) + 2) % 2 ? '#3fc6ec' : '#4fd0f0');
         for (const lx of [-12, -6, 6, 12]) if (near) D.poly3(cam, [P3(z0, lx - 0.1, -0.09), P3(z0, lx + 0.1, -0.09), P3(zb, lx + 0.1, -0.09), P3(zb, lx - 0.1, -0.09)], ((Math.floor(za / 2) % 2) + 2) % 2 ? '#e8413a' : '#ffffff');
+        for (let k = 0; k < 4; k++) {                               // the waves, rolling in from the wave house
+          const wz = WAVEH.z - ((t * 3 + k * 13) % 52), a = Math.max(z0, wz), b = Math.min(zb, wz + 0.8);
+          if (b > a) D.poly3(cam, [P3(a, -POOL_W + 0.4, -0.08), P3(a, POOL_W - 0.4, -0.08), P3(b, POOL_W - 0.4, -0.08), P3(b, -POOL_W + 0.4, -0.08)], '#ffffff', 0.75 * Math.min(1, (wz - FINISH) / 12));
+        }
       }
       if (near && ea > 1) for (let pz = Math.ceil((za - 4) / 8) * 8 + 4; pz < zb; pz += 8) {   // stilts and a cross beam
         const hy = course.height(pz), gy = hy - elev(pz);
@@ -407,6 +478,18 @@
       const D = root.SkiDraw, { cam, add, lo, hi, zc, wx, t } = R;
       // the other mascots cheering on the pool deck round the splash pool
       if (R.zc > FINISH - 160) root.SkiWorld.crowd(R, { z0: FINISH - 2, z1: FINISH + 42, gap: POOL_W + 1.5 - course.HALF, stand: { top: '#f4fbff', top2: '#dff0f8', face: '#5ab8e0' } });
+      if (zc > FINISH - 150) {                                     // 浪花泳池: the wave house, lifeguards, rings on the water; the beach behind the stands
+        add(WAVEH.z + WAVEH.d / 2, () => waveHouse(D, R), false, 0);
+        for (const sd of [-1, 1]) add(FINISH + 48, () => lifeguard(D, R, sd * 16.6, FINISH + 48), false, sd * 16.6);
+        add(FINISH + 21.6, () => kiosk(D, R, 28, FINISH + 20), false, 28);
+        for (const u of BEACH.umbs) add(u.z, () => umbrella(D, cam, wx(u.z, u.x), u.z, course.height(u.z), u.col), false, u.x);
+        for (const l of BEACH.loungers) add(l.z, () => lounger(D, R, wx(l.z, l.x), l.z, l.col), false, l.x);
+        for (const p of BEACH.palms) add(p.z, () => palm(D, cam, wx(p.z, p.x), p.z, course.height(p.z), p.h, p.lean, Math.abs(p.z - zc) > 45), false, p.x);
+        for (const g of BEACH.rings) add(g.z, () => {
+          const q = D.toCam(cam, [wx(g.z, g.x), course.height(g.z) - 0.06 + 0.07 * Math.sin(t * 2 + g.ph), g.z]);
+          if (q[2] > 1) { const [sx, sy] = D.scr(cam, q); D.pix(ART.ring.rows, ART.ring.cols, sx, sy, ART.ring.cs * cam.F / q[2]); }
+        }, false, g.x);
+      }
       const hidden = z => inTun(zc) && z < TUN[1] + 2;            // from inside the tube only what lies past its mouth can show
       const gy = z => course.height(z) - elev(z);
       for (const d of PARK.rides) {
@@ -443,8 +526,7 @@
       const f = D.poly3(cam, [P3(z, -x, y0 - h), P3(z, x, y0 - h), P3(z, x, y1 - h), P3(z, -x, y1 - h)], col);
       D.poly3(cam, [P3(z - 0.01, -x, y0 - h), P3(z - 0.01, x, y0 - h), P3(z - 0.01, x, y0 - h + 0.16), P3(z - 0.01, -x, y0 - h + 0.16)], '#ffffff');
       if (f && label) {
-        const q = D.toCam(cam, P3(z, 0, (y0 + y1) / 2 - h));
-        if (q[2] > 1) { const [sx, sy] = D.scr(cam, q), s2 = cam.F / q[2]; D.txt(label, sx, sy + s2 * 0.42, { size: Math.round(s2 * 1.15), color: '#ffffff', align: 'center', ls: Math.round(s2 * 0.1) }); }
+        D.print(cam, P3(z - 0.02, -x, y1 - h), P3(z - 0.02, x, y1 - h), P3(z - 0.02, -x, y0 + 0.16 - h), label === 'GOAL' ? GOAL_SIGN : label, { w: 2 * x, h: y1 - y0 - 0.16 });   // (printed on the banner: it leans with it)
       } else if (f) for (let k = 0; k < 6; k++) {
         const bx = lerp(-x + 1, x - 1, k / 5), by = (y0 + y1) / 2 - h + (k % 2 ? 0.15 : -0.12);
         D.poly3(cam, [P3(z - 0.02, bx - 0.14, by - 0.14), P3(z - 0.02, bx + 0.14, by - 0.14), P3(z - 0.02, bx + 0.14, by + 0.14), P3(z - 0.02, bx - 0.14, by + 0.14)], '#ffffff', 0.8);

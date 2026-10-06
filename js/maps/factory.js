@@ -282,7 +282,7 @@
   // ---- what stands round the course
   const SCENE = (() => {
     const r = rng(7337), belts = [], arms = [], gears = [], toys = [], doms = [], balloons = [], crowd = [], piles = [], cols = [], signs = [], tires = [], rolls = [];
-    for (const [a, b] of [[10, 410], [L1 + 70, FINISH + 30]]) for (const sd of [-1, 1]) belts.push({ a, b, sd, x: 15 });   // side assembly lines along the walls
+    for (const [a, b] of [[10, 410], [L1 + 70, FINISH - 50]]) for (const sd of [-1, 1]) belts.push({ a, b, sd, x: 15 });   // (round the finish: the shop's shelves)   // side assembly lines along the walls
     for (let z = 30; z < 400; z += 34) arms.push({ z, sd: (z / 34) % 2 < 1 ? -1 : 1 });
     for (let z = L1 + 80; z < FINISH; z += 40) arms.push({ z, sd: (z / 40) % 2 < 1 ? 1 : -1 });
     for (let z = 20; z < FINISH + 60; z += 16) cols.push({ z });
@@ -292,7 +292,7 @@
     // giant toys standing about the floor: teddies, ducks, rocking horses, block towers, balls
     const KINDS = ['teddy', 'blocks', 'ball', 'bigduck', 'horse', 'rings'];
     for (let z = 50; z < FINISH; z += 26 + r() * 22) {
-      if (z > L0 - 70 && z < L1 + 50) continue;                  // (round the loop the view turns over: no flat pictures there)
+      if ((z > L0 - 70 && z < L1 + 50) || z > FINISH - 50) continue;   // (round the loop the view turns over: no flat pictures there; round the finish, the shop)
       const sd = r() < 0.5 ? -1 : 1, k = KINDS[(r() * KINDS.length) | 0];
       toys.push({ z, sd, x: 9 + r() * 14, k, col: TOY[(r() * TOY.length) | 0], seed: (r() * 1e6) | 0 });
     }
@@ -304,7 +304,7 @@
       for (const sd of [-1, 1]) if (r() < 0.7) crowd.push({ z, sd, x: 9.5 + r() * 2.5, row: r() < 0.5 ? 0 : 1, id: ids[(r() * ids.length) | 0], ph: r() * 6 });
     }
     for (let z = TRACK[0] + 30; z < TRACK[1]; z += 22 + r() * 18) if (!inLoop(z) && Math.abs(z - L0) > 30) tires.push({ z, sd: course.curvature(z) > 0 ? -1 : 1 });
-    for (let z = 20; z < FINISH; z += 30 + r() * 30) if (!inLoop(z)) piles.push({ z, sd: r() < 0.5 ? -1 : 1, x: 24 + r() * 7, n: 2 + ((r() * 3) | 0), col: r() < 0.5 ? '#c89a5a' : TOY[(r() * TOY.length) | 0] });
+    for (let z = 20; z < FINISH - 50; z += 30 + r() * 30) if (!inLoop(z)) piles.push({ z, sd: r() < 0.5 ? -1 : 1, x: 24 + r() * 7, n: 2 + ((r() * 3) | 0), col: r() < 0.5 ? '#c89a5a' : TOY[(r() * TOY.length) | 0] });
     for (let z = L1 + 76; z < FINISH; z += 28) rolls.push({ z, sd: (z / 28) % 2 < 1 ? -1 : 1, col: TOY[(z / 28 | 0) % TOY.length] });
     const byZ = a => a.sort((p, q) => p.z - q.z);
     return { belts, arms: byZ(arms), gears, toys, doms, balloons: byZ(balloons), crowd, piles, cols, signs, tires, rolls };
@@ -634,6 +634,60 @@
     }
   }
 
+  // ---- the finish: 玩具店, where the toys go. Out through the gift box she is in the toy shop: its front straight ahead
+  // (the name in rainbow letters, a striped awning, a window full of toys, a giant teddy by the door, balloons), shelves
+  // stacked with what the factory made along both sides behind the stands (the finish shot looks across her at them)
+  const SHOP = { z: FINISH + 62, hw: 15, h: 8 };
+  const SHELVES = (() => {
+    const r = rng(5150), out = [];
+    for (const sd of [-1, 1]) for (let z = FINISH - 46; z < FINISH + 56; z += 7) {
+      const items = [];
+      for (let lv = 0; lv < 4; lv++) for (let k = 0; k < 3; k++) items.push({ lv, dz: 1 + k * 1.8 + r() * 0.4, kind: ['box', 'box', 'teddy', 'robot', 'top', 'box'][(r() * 6) | 0], col: TOY[(r() * TOY.length) | 0] });
+      out.push({ z, x: sd * 17, sd, items });
+    }
+    return out;
+  })();
+  function shelf(D, R, s) {                                        // a wooden shelf unit facing the course, four shelves of toys (only its
+    // face towards the course: dozens of these round the finish; toys drawn as pictures only near, as blocks of their colour further off)
+    const { cam, t } = R, k = R.W3(s.z, 0, 0)[2] - s.z, z0 = s.z + k, z1 = z0 + 6.4, y = gy(s.z + 6.4), X = R.wx(s.z, s.x), n = [-s.sd, 0, 0];
+    const dist = Math.abs(s.z - R.zc), xb = X + s.sd * 1.2, near = dist < 18, face = (x, ya, yb, za, zb, col) => D.poly3(cam, [[x, ya, za], [x, ya, zb], [x, yb, zb], [x, yb, za]], col, 1, n);
+    face(xb, y, y + 7.2, z0, z1, '#b07a44');                       // (the back)
+    if (dist > 45) { for (let lv = 0; lv < 4; lv++) { const yy = y + 0.45 + lv * 1.7; face(X + s.sd * 0.6, yy, yy + 1.1, z0 + 0.4, z1 - 0.4, s.items[lv * 3].col); } return; }   // (far off: a band of colour a shelf)
+    for (const dz of [0, 6.4]) D.poly3(cam, [[X, y, z0 + dz], [xb, y, z0 + dz], [xb, y + 7.2, z0 + dz], [X, y + 7.2, z0 + dz]], '#8a5a30');   // (the ends)
+    for (let lv = 0; lv <= 4; lv++) { const yy = y + 0.3 + lv * 1.7; D.poly3(cam, [[X, yy + 0.15, z0], [X, yy + 0.15, z1], [xb, yy + 0.15, z1], [xb, yy + 0.15, z0]], '#e0a868'); face(X, yy, yy + 0.15, z0, z1, '#c98a55'); }
+    for (const it of s.items) {
+      const zz = s.z + it.dz, yy = y + 0.45 + it.lv * 1.7, xf = X + s.sd * 0.05;
+      if (it.kind === 'box' || !near) face(xf, yy, yy + (it.kind === 'box' ? 1.2 : 1), zz + k - 0.5, zz + k + 0.5, it.kind === 'teddy' ? '#b07a46' : it.kind === 'robot' ? '#3a7fe8' : it.col);
+      else if (it.kind === 'teddy') R.billboard({ ...PIX.teddy, cs: 0.08 }, zz, s.x + s.sd * 0.5, yy - y);
+      else if (it.kind === 'robot') R.billboard({ cs: 0.12, rows: PIX.robot[0], cols: PIX.robotCols }, zz, s.x + s.sd * 0.5, yy - y);
+      else R.billboard({ cs: 0.13, rows: PIX.top[Math.floor(t * 4 + zz) % 2], cols: PIX.topCols }, zz, s.x + s.sd * 0.5, yy - y);
+    }
+  }
+  function toyShop(D, R) {                                         // the shop front: rainbow name, awning, display window, door, a giant teddy, balloons
+    const { cam, t } = R, z = R.W3(SHOP.z, 0, 0)[2], y = gy(SHOP.z), { hw, h } = SHOP, f = z - 0.02, g = D.ctx;   // (z: in the world, nearer than the course past the loop)
+    D.box3(cam, -hw, hw, y, y + h, z, z + 4, { side: '#ffd0e4', rear: '#fff0f6', top: '#ffffff' });
+    if (cam.C[2] > z) return;
+    const q = (x0, y0, x1, y1, dz, col, a = 1) => D.poly3(cam, [[x0, y0, f - dz], [x1, y0, f - dz], [x1, y1, f - dz], [x0, y1, f - dz]], col, a);
+    q(-hw + 1.2, y + 0.6, -2.4, y + 4.4, 0, '#5a3a6a'); q(-hw + 1.4, y + 0.8, -2.6, y + 4.2, 0.01, '#bfe8ff', 0.85);   // the display window
+    [[-12, '#ff5a5a'], [-9.5, '#3a8fff'], [-7, '#ffd23f'], [-4.6, '#3fc76a']].forEach(([x, col], k) => D.box3(cam, x - 0.7, x + 0.7, y + 0.8, y + 1.8 + (k % 2) * 0.8, z - 1.2, z - 0.4, { side: col, rear: mixHex(col, '#ffffff', 0.3), top: mixHex(col, '#ffffff', 0.5) }));
+    q(-1.6, y, 1.6, y + 3.6, 0, '#5a3a6a'); q(-1.4, y, 1.4, y + 3.4, 0.01, '#ffe08a');   // the door, warm light inside
+    q(3.2, y + 0.6, hw - 1.2, y + 4.4, 0, '#5a3a6a'); q(3.4, y + 0.8, hw - 1.4, y + 4.2, 0.01, '#bfe8ff', 0.85);
+    for (let k = 0; k < 12; k++) { const a = lerp(-hw - 0.4, hw + 0.4, k / 12), b = lerp(-hw - 0.4, hw + 0.4, (k + 1) / 12); D.poly3(cam, [[a, y + 4.6, z - 1.8], [b, y + 4.6, z - 1.8], [b, y + 5.4, z - 0.05], [a, y + 5.4, z - 0.05]], k % 2 ? '#ffffff' : '#ff4f7a'); }   // the awning
+    const bands = ['#ff5a5a', '#ff8a2a', '#ffd23f', '#3fc76a', '#3a8fff', '#b46cff'], sy = y + 5.6, sh = 2.6;   // the name over it, on a rainbow board
+    bands.forEach((col, k) => q(-hw + 1, sy + sh * k / 6, hw - 1, sy + sh * (k + 1) / 6, 0.03, col));
+    D.print(cam, [-hw + 1, sy + sh, f - 0.05], [hw - 1, sy + sh, f - 0.05], [-hw + 1, sy, f - 0.05], '玩具店', { w: 2 * hw - 2, h: sh, color: '#ffffff', stroke: '#5a3a6a', fill: 0.85 });
+    R.billboard({ ...PIX.teddy, cs: 0.55 }, SHOP.z - 3, 10.5, 0);   // a giant teddy by the door
+    for (const [bx, by, col, ph] of [[-13.5, 7.5, '#ff5a5a', 0], [-12.6, 8.4, '#ffd23f', 1], [-14.3, 8.6, '#3a8fff', 2], [13.4, 8, '#3fc76a', 3], [14.2, 8.8, '#ff8ad0', 4]]) {   // bunches of balloons on strings
+      const p = D.toCam(cam, [bx, y + by + 0.2 * Math.sin(t * 2 + ph), z - 0.6]), s0 = D.toCam(cam, [bx > 0 ? 12.6 : -12.6, y + 4.6, z - 0.6]);
+      if (p[2] < 1 || s0[2] < 1) continue;
+      const [sx, sy2] = D.scr(cam, p), [tx, ty] = D.scr(cam, s0), rr = cam.F / p[2] * 0.7;
+      g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.moveTo(sx, sy2 + rr); g.lineTo(tx, ty); g.stroke();
+      g.fillStyle = col; g.beginPath(); g.ellipse(sx, sy2, rr * 0.85, rr, 0, 0, 7); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.arc(sx - rr * 0.3, sy2 - rr * 0.35, rr * 0.22, 0, 7); g.fill();
+    }
+  }
+
+  const GOAL_SIGN = 'GOAL 玩具店';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#ffd23f', '#ff5a5a', '#3a8fff', '#3fc76a'], trail: '#8a90a6', ski: ['#3a8fff', '#9fd0ff', '#2457c0'],
     boost: { pad: '#ffd23f', glow: '#ff8a2a', arrow: '#ffffff' },
@@ -686,6 +740,10 @@
       const D = root.SkiDraw, { add, lo, hi, zc, t, cam } = R;
       // the other mascots cheering on stands of toy blocks either side of the finish
       if (R.zc > FINISH - 160) root.SkiWorld.crowd(R, { z0: FINISH - 50, z1: FINISH + 25, stand: { top: '#ffd23f', top2: '#4fb0ff', face: '#ff4f7a' } });
+      if (R.zc > FINISH - 150) {                                   // 玩具店: its front ahead, shelves of toys behind the stands
+        add(SHOP.z + 2, () => toyShop(D, R), false, 0);
+        for (const sh of SHELVES) if (Math.abs(sh.z - R.zc) < 70) add(sh.z + 3.2, () => shelf(D, R, sh), false, sh.x);
+      }
       const ok = (z, d = 115) => z > lo && z < hi && Math.abs(z - zc) < d;
       if (ok(WIND[0], 125)) add(WIND[0] - 3, () => windKey(D, R));
       const flat = cam.u[1] > 0.5;                                 // (flat pictures only while the view is upright)
@@ -733,12 +791,12 @@
       if (track) {                                                // a chequered banner
         const n = Math.round(h * 2.4);
         for (let r = 0; r < 2; r++) for (let k = 0; k < n; k++) D.poly3(cam, [P3(z, lerp(-h, h, k / n), y1 - r * 0.5), P3(z, lerp(-h, h, (k + 1) / n), y1 - r * 0.5), P3(z, lerp(-h, h, (k + 1) / n), y1 + 0.5 - r * 0.5), P3(z, lerp(-h, h, k / n), y1 + 0.5 - r * 0.5)], (k + r) % 2 ? '#ffffff' : '#1a1a1a');
-        if (label) text3(D, R, P3(z - 0.05, 0, y1 + 1.4), label, 1.2, '#ffffff', { stroke: '#d4501a', far: 120 });
+        if (label) D.print(cam, P3(z - 0.05, -h, y1 + 2.0), P3(z - 0.05, h, y1 + 2.0), P3(z - 0.05, -h, y1 + 0.9), label, { w: 2 * h, h: 1.1, stroke: '#d4501a', fill: 0.95 });   // (over the flags, in the gate's own plane)
         return;
       }
       const f = D.poly3(cam, [P3(z, -h, y1 - 0.9), P3(z, h, y1 - 0.9), P3(z, h, y1 + 0.6), P3(z, -h, y1 + 0.6)], label ? D.C.orange : '#2a2d36');
       if (!label) stripes(D, R, z - 0.01, -h, h, y1 + 0.35, y1 + 0.6, '#ffcf3a', '#2a2d36', Math.round(h * 3));
-      if (f) text3(D, R, P3(z - 0.05, 0, y1 - 0.15), label || ['生產線', '品管', '組裝', '好玩', '出貨', '加油'][i % 6], 1.0, label ? '#ffffff' : '#ffcf3a', { far: 120 });
+      if (f) { const top = label ? y1 + 0.6 : y1 + 0.35; D.print(cam, P3(z - 0.05, -h, top), P3(z - 0.05, h, top), P3(z - 0.05, -h, y1 - 0.9), label || ['生產線', '品管', '組裝', '好玩', '出貨', '加油'][i % 6], { w: 2 * h, h: top - y1 + 0.9, color: label ? '#ffffff' : '#ffcf3a' }); }   // (printed on the banner)
     },
     obstacle(R, o, i) {
       const D = root.SkiDraw, { cam, S3, P3 } = R;
@@ -1106,7 +1164,7 @@
     D.poly3(cam, [P3(z - 0.2, -h, y), P3(z - 0.2, h, y), P3(z - 0.2, h, y + 2), P3(z - 0.2, -h, y + 2)], col);
     D.poly3(cam, [P3(z - 0.21, -h - 2, y + 0.75), P3(z - 0.21, h + 2, y + 0.75), P3(z - 0.21, h + 2, y + 1.25), P3(z - 0.21, -h - 2, y + 1.25)], rib);
     for (const sd of [-1, 1]) D.poly3(cam, [P3(z - 0.22, 0, y + 2), P3(z - 0.22, sd * 2.6, y + 3.8), P3(z - 0.22, sd * 2.8, y + 2.4)], rib);
-    text3(D, R, P3(z - 0.3, 0, y + 1), 'GOAL 出貨！', 1.2, '#ffffff', { far: 125, stroke: '#c8243a' });
+    D.print(cam, P3(z - 0.3, -h, y + 2), P3(z - 0.3, h, y + 2), P3(z - 0.3, -h, y), GOAL_SIGN, { w: 2 * h, h: 2, stroke: '#c8243a', fill: 0.6 });   // (printed on the box: it leans with it)
   }
 
   root.SkiMaps.define('factory', { course, theme, music: { race: 'factory', result: 'factory_result', tv: 'factory_tv', back: 'factory_back', cues: { windup: 'factory_wind', unwind: 'factory_back' } }, score: { par: 122, ranks: root.SkiScore.RANKS, key: 'ski-best-factory' }, bg: '#9a8cc4' });

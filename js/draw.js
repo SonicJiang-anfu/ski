@@ -94,6 +94,43 @@
     return [dx * r[0] + dy * r[1] + dz * r[2], dx * u[0] + dy * u[1] + dz * u[2] + D.bend * d * Math.abs(d), d];
   };
   D.scr = (cam, q) => [D.W / 2 + cam.F * q[0] / q[2], cam.cy - cam.F * q[1] / q[2]];
+  // words printed on a flat face in the world (a banner): drawn once into a picture, then laid on the face as the camera
+  // sees it, so they lean and turn with it (written flat on the screen they stayed level while the banner tilted). Seen
+  // from behind they still read the right way round, as on a banner printed both sides. tl, tr, bl: the face's corners
+  // (world points); o: { w, h (its size, world units), color, stroke (an outline colour), fill (how much of its height the words take) }
+  const PRINTS = new Map();
+  function printImg(str, col, stroke) {
+    const key = str + '|' + col + '|' + stroke;
+    if (PRINTS.has(key)) return PRINTS.get(key);
+    const cv = document.createElement('canvas'), g = cv.getContext('2d'), S = 64;
+    g.font = `${S}px ${PX}`;
+    const w = Math.ceil(g.measureText(str).width) + (stroke ? 20 : 8);
+    cv.width = w; cv.height = Math.round(S * 1.25);
+    g.font = `${S}px ${PX}`; g.textBaseline = 'middle'; g.textAlign = 'center'; g.fillStyle = col;
+    if (stroke) { g.lineWidth = 10; g.lineJoin = 'round'; g.strokeStyle = stroke; g.strokeText(str, w / 2, cv.height / 2 + S * 0.06); }
+    g.fillText(str, w / 2, cv.height / 2 + S * 0.06);
+    const im = { cv, w, h: cv.height };
+    PRINTS.set(key, im);
+    return im;
+  }
+  D.print = (cam, tl, tr, bl, str, o) => { if (typeof document !== 'undefined') D.printImg(cam, tl, tr, bl, printImg(str, o.color || '#ffffff', o.stroke || null), o); };
+  // a picture laid on a face the same way (im: { cv: anything drawImage takes, w, h }), as big as fits (o.fill of the height)
+  D.printImg = (cam, tl, tr, bl, im, o) => {
+    if (typeof document === 'undefined' || !im || !im.w) return;
+    const q = [tl, tr, bl].map(p => D.toCam(cam, p));
+    if (q.some(v => v[2] < NEAR + 0.2)) return;
+    let [a, b, c] = q.map(v => D.scr(cam, v));
+    if ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) < 0) [a, b, c] = [b, a, [c[0] + b[0] - a[0], c[1] + b[1] - a[1]]];   // (from behind: its right edge is on the left)
+    if (Math.hypot(c[0] - a[0], c[1] - a[1]) < 4) return;          // (too far to read)
+    let th = o.h * (o.fill ?? 0.72), tw = th * im.w / im.h;        // as tall as most of the face, narrower if it would not fit across
+    if (tw > o.w * 0.92) { tw = o.w * 0.92; th = tw * im.h / im.w; }
+    const u0 = (1 - tw / o.w) / 2, v0 = (1 - th / o.h) / 2, ux = b[0] - a[0], uy = b[1] - a[1], vx = c[0] - a[0], vy = c[1] - a[1];
+    const g = D.ctx, sm = g.imageSmoothingEnabled;
+    g.save(); g.imageSmoothingEnabled = true;
+    g.transform(ux * tw / o.w / im.w, uy * tw / o.w / im.w, vx * th / o.h / im.h, vy * th / o.h / im.h, a[0] + u0 * ux + v0 * vx, a[1] + u0 * uy + v0 * vy);
+    g.drawImage(im.cv, 0, 0);
+    g.restore(); g.imageSmoothingEnabled = sm;
+  };
   const NEAR = 0.3, QA = [], OUT = [];
   // filled polygon with near-plane clipping; `normal` culls faces turned away from the camera; returns screen points
   D.poly3 = (cam, pts, col, alpha = 1, normal = null) => {

@@ -271,7 +271,7 @@
     for (let z = RIDGE[1] + 30; z < MINE[0] - 10; z += 36) falls.push({ z, sd: Math.floor(z / 36) % 2 ? 1 : -1 });
     for (let z = 40; z < FINISH; z += 22 + r() * 30) { if (busy(z) || (z > SHORE && z < ISL.end + 20)) continue; crystals.push({ z, x: (r() < 0.5 ? -1 : 1) * (HW(z) + 2 + r() * 8), h: 0.8 + r() * 1.4, seed: (r() * 1e6) | 0 }); }
     for (const [z, t] of [[56, '高溫危險'], [200, '小心落石'], [RIDGE[0] - 8, '火口緣'], [FORK[0] - 20, '← 熔岩管　噴泉區 →'], [LAND + 30, '快逃！'], [LAND + 126, '小心落石']]) signs.push({ z, t, sd: signs.length % 2 ? 1 : -1 });
-    for (let z = VILLAGE - 10; z < FINISH + 70; z += 13) for (const sd of [-1, 1]) houses.push({ z: z + (sd > 0 ? 6 : 0), sd, x: HW(z) + 6 + ((z * 7) % 5), col: ['#c8463a', '#3a6a9a', '#5a8a4a', '#b07a3a'][Math.floor(z / 13 + (sd > 0 ? 1 : 0)) % 4] });
+    for (let z = VILLAGE - 10; z < FINISH + 48; z += 13) for (const sd of [-1, 1]) houses.push({ z: z + (sd > 0 ? 6 : 0), sd, x: HW(z) + 6 + ((z * 7) % 5), col: ['#c8463a', '#3a6a9a', '#5a8a4a', '#b07a3a'][Math.floor(z / 13 + (sd > 0 ? 1 : 0)) % 4] });
     for (let z = VILLAGE; z < FINISH + 50; z += 22) for (const sd of [-1, 1]) pools.push({ z: z + (sd > 0 ? 11 : 0), x: sd * (HW(z) + 2.8), ph: r() * 6 });
     for (let z = VILLAGE - 30; z < FINISH; z += 8) for (const sd of [-1, 1]) lanterns.push({ z, sd });
     for (let z = 0; z < FINISH; z += 150 + r() * 60) { if (busy(z) || (z > SHORE - 20 && z < ISL.end + 30)) continue; streams.push({ z, sd: r() < 0.5 ? -1 : 1, len: 18 + r() * 14, x: 14 + r() * 10 }); }
@@ -789,7 +789,7 @@
     D.poly3(cam, [P3(z - 0.01, -h, y - 0.4), P3(z - 0.01, h, y - 0.4), P3(z - 0.01, h, y - 0.25), P3(z - 0.01, -h, y - 0.25)], '#ffb020');
     D.poly3(cam, [P3(z + 0.01, -h, y - 0.4), P3(z + 0.01, h, y - 0.4), P3(z + 0.01, h, y - 0.25), P3(z + 0.01, -h, y - 0.25)], '#ffb020');
     const front = cam.C[2] < z;
-    text3(D, R, P3(z + (front ? -0.6 : 0.6), 0, y + 0.2), 'GOAL 溫泉鄉', 1.1, '#ffffff', { far: 125, stroke: '#7a1a10' });
+    D.print(cam, P3(z - 0.02, -h, y + 0.8), P3(z - 0.02, h, y + 0.8), P3(z - 0.02, -h, y - 0.25), GOAL_SIGN, { w: 2 * h, h: 1.05, stroke: '#7a1a10', fill: 0.8 });   // (printed on the banner, both sides)
     for (const sd of [-1, 1]) glowDot(D, R, P3(z + (front ? -0.8 : 0.8), sd * (h - 1), y - 1.4), 0.5, '#ffb050', 0.8);
   }
 
@@ -826,6 +826,46 @@
     }
   }
 
+  // ---- the finish: 溫泉鄉's inn, straight ahead past the gate: the bathhouse every road down the volcano leads to. Two
+  // storeys of dark wood under tiled roofs, a curtain over the door with 湯 on it, a row of red lanterns, steam pouring
+  // up from the baths behind it
+  const INN = { z: FINISH + 60, hw: 13, d: 10 };
+  function inn(D, R) {
+    const { cam, t } = R, z = INN.z, y = gy(z), { hw, d } = INN, f = z - 0.02, g = D.ctx;
+    for (let j = 0; j < 7; j++) {                                  // steam from the baths behind, drawn first: it rises from behind the roofs
+      const ph = (t * 0.18 + j / 7) % 1, X = lerp(-hw, hw, (j + 0.5) / 7) + Math.sin(j * 2.3) * 2, q = D.toCam(cam, [X, y + 6 + ph * 14, z + d + 2]);
+      if (q[2] < 1) continue;
+      const [sx, sy] = D.scr(cam, q), rr = cam.F / q[2] * (2 + ph * 4);
+      g.save(); g.globalAlpha *= 0.5 * (1 - ph); g.fillStyle = '#f4f0ea'; g.beginPath(); g.arc(sx, sy, rr, 0, 7); g.fill(); g.restore();
+    }
+    const roof = (y0, w, dd, rise) => {                            // a tiled roof: dark slopes, a ridge, the eaves turned up a little at the ends
+      for (const sd of [-1, 1]) D.poly3(cam, [[sd * (w + 1.2), y0, z - 1.2], [0, y0 + rise, z - 1.2], [0, y0 + rise, z + dd + 1.2], [sd * (w + 1.2), y0, z + dd + 1.2]], sd < 0 ? '#3a3a44' : '#2e2e38', 1, [sd * rise, w, 0]);
+      D.poly3(cam, [[-w - 1.2, y0, z - 1.2], [w + 1.2, y0, z - 1.2], [0, y0 + rise, z - 1.2]], '#46464f', 1, [0, 0, -1]);
+      for (const sd of [-1, 1]) D.poly3(cam, [[sd * (w + 1.2), y0, z - 1.25], [sd * (w + 1.9), y0 + 0.6, z - 1.25], [sd * (w + 0.8), y0 + 0.2, z - 1.25]], '#2e2e38');
+    };
+    D.box3(cam, -hw, hw, y, y + 4, z, z + d, { side: '#6a4a32', rear: '#8a6242', top: '#6a4a32' });   // the ground floor
+    roof(y + 4, hw, d, 1.6);
+    D.box3(cam, -hw + 2.5, hw - 2.5, y + 4.6, y + 8, z + 1, z + d - 1, { side: '#6a4a32', rear: '#8a6242', top: '#6a4a32' });   // the upper floor
+    roof(y + 8, hw - 2.5, d - 2, 3);
+    if (cam.C[2] > z) return;
+    const q = (x0, y0, x1, y1, dz, col) => D.poly3(cam, [[x0, y0, f - dz], [x1, y0, f - dz], [x1, y1, f - dz], [x0, y1, f - dz]], col);
+    for (let k = 0; k < 6; k++) { const x0 = -hw + 2.9 + k * 3.6; q(x0, y + 5.3, x0 + 2.4, y + 7.4, -1, '#ffd27a'); q(x0 + 1.15, y + 5.3, x0 + 1.25, y + 7.4, -1.01, '#4a3020'); }   // (upstairs, lit paper windows)
+    q(-hw + 1, y + 1, -4, y + 3.2, 0, '#ffd27a'); q(4, y + 1, hw - 1, y + 3.2, 0, '#ffd27a');
+    for (let x = -hw + 2.5; x < hw - 1; x += 1.5) if (Math.abs(x) > 4) q(x, y + 1, x + 0.1, y + 3.2, 0.01, '#4a3020');
+    q(-3.4, y, 3.4, y + 3.6, 0, '#2a1a12');                        // the doorway, the curtain across it with 湯 on it
+    for (let k = 0; k < 3; k++) q(-3.2 + k * 2.15, y + 1.6, -1.15 + k * 2.15, y + 3.5, 0.01, '#2f4f9a');
+    D.print(cam, [-3.2, y + 3.5, f - 0.02], [3.2, y + 3.5, f - 0.02], [-3.2, y + 1.6, f - 0.02], '湯', { w: 6.4, h: 1.9, color: '#ffffff', fill: 0.85 });
+    for (let k = 0; k < 8; k++) {                                  // red lanterns under the eaves, glowing, swinging a little
+      const X = lerp(-hw + 0.5, hw - 0.5, (k + 0.5) / 8), sw = 0.08 * Math.sin(t * 2 + k), p = D.toCam(cam, [X + sw, y + 3.6, z - 1.1]);
+      if (p[2] < 1) continue;
+      const [sx, sy] = D.scr(cam, p), rr = cam.F / p[2] * 0.42;
+      g.save(); g.globalAlpha *= 0.35; g.fillStyle = '#ffb050'; g.beginPath(); g.arc(sx, sy, rr * 2.2, 0, 7); g.fill(); g.restore();
+      g.fillStyle = '#e8343a'; g.beginPath(); g.ellipse(sx, sy, rr * 0.8, rr, 0, 0, 7); g.fill();
+      g.fillStyle = '#1a1a1a'; g.fillRect(sx - rr * 0.5, sy - rr * 1.05, rr, rr * 0.18); g.fillRect(sx - rr * 0.5, sy + rr * 0.87, rr, rr * 0.18);
+    }
+  }
+
+  const GOAL_SIGN = 'GOAL 溫泉鄉';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#5a4a48', '#3a2e2c', '#ff7a1a'], trail: '#2a201e', ski: ['#d42f2f', '#ff7a5a', '#8a1a14'],
     flow: { lane: '#ffb020', edge: '#fff1a8', mark: '#ffffff' },   // (a lane of running lava to surf)
@@ -886,6 +926,7 @@
         for (const c of SCENE.crystals) if (ok(c.z, 80)) add(c.z, () => crystal(D, R, c, fogK(R, c.z, c.x)), false, c.x);
         for (const s of SCENE.signs) if (ok(s.z, 100)) add(s.z, () => sign(D, R, s), false, s.sd * 6);
         for (const h of SCENE.houses) if (ok(h.z, 120)) add(h.z, () => house(D, R, h, fogK(R, h.z, h.sd * h.x)), false, h.sd * h.x);
+        if (zc > FINISH - 200) add(INN.z + INN.d / 2, () => inn(D, R), false, 0);   // 溫泉鄉's inn, ahead past the gate
         for (const p of SCENE.pools) if (ok(p.z, 90)) add(p.z, () => pool(D, R, p, fogK(R, p.z, p.x)), false, p.x);
         for (const l of SCENE.lanterns) if (ok(l.z, 80)) add(l.z, () => { const X = l.sd * (HW(l.z) + 1.2); R.billboard({ cs: 0.1, rows: ['.KK.', 'RRRR', 'RYYR', 'RYYR', 'RRRR', '.KK.', '.K..', '.K..', '.K..', '.K..', '.K..', '.K..'], cols: { K: '#2a1a14', R: '#d43a2a', Y: '#ffcf6b' }, shadow: false }, l.z, X, 0); glowDot(D, R, R.P3(l.z, X, 0.95), 0.25, '#ffb050', 0.5); }, false, l.sd * 9);
         for (const s of SCENE.streams) if (s.z + s.len > lo && s.z < hi && Math.abs(s.z - zc) < 110) add(s.z, () => { const X = s.sd * s.x; D.poly3(R.cam, [R.P3(s.z, X - 1, 0.01), R.P3(s.z, X + 1, 0.01), R.P3(s.z + s.len, X + 1 + s.sd * 6, -0.04), R.P3(s.z + s.len, X - 1 + s.sd * 6, -0.04)], LAVA[0]); }, false, s.sd * s.x);
@@ -909,7 +950,7 @@
       }
       const f = D.poly3(cam, [P3(z, -h + 0.45, y1 - 1.2), P3(z, h - 0.45, y1 - 1.2), P3(z, h - 0.45, y1), P3(z, -h + 0.45, y1)], label ? D.C.orange : '#8a1a14');
       D.poly3(cam, [P3(z - 0.01, -h + 0.45, y1 - 1.2), P3(z - 0.01, h - 0.45, y1 - 1.2), P3(z - 0.01, h - 0.45, y1 - 1.05), P3(z - 0.01, -h + 0.45, y1 - 1.05)], '#ffb020');
-      if (f) text3(D, R, P3(z - 0.05, 0, y1 - 0.6), label || ['高溫注意', '熔岩', '衝啊', '小心落石', '火山', '加油'][i % 6], 0.95, label ? '#ffffff' : '#ffcf3a', { far: 120 });
+      if (f) D.print(cam, P3(z - 0.05, -h + 0.45, y1), P3(z - 0.05, h - 0.45, y1), P3(z - 0.05, -h + 0.45, y1 - 1.05), label || ['高溫注意', '熔岩', '衝啊', '小心落石', '火山', '加油'][i % 6], { w: 2 * h - 0.9, h: 1.05, color: label ? '#ffffff' : '#ffcf3a' });   // (printed on the banner)
     },
     obstacle(R, o, i) {
       const D = root.SkiDraw;

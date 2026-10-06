@@ -800,11 +800,11 @@
       if (k % 2) D.poly3(cam, [p(za, r.x - r.hw * 0.6, ya + 0.02), p(zb, r.x, yb + 0.02), p(za, r.x + r.hw * 0.6, ya + 0.02), p(za + 0.3, r.x, ya + 0.02)], arrow);
     }
   }
-  function tickGate(D, R, z, label, col, back) {                     // a tick on the chart's time axis: two posts of light, its label
+  function tickGate(D, R, z, label, col) {                           // a tick on the chart's time axis: two posts of light, its label over them (in the gate's plane: it turns with it)
     const { P3 } = R, h = HW(z) + 0.4, y1 = 4.4;
     for (const sd of [-1, 1]) D.poly3(R.cam, [P3(z, sd * h - 0.1, 0), P3(z, sd * h + 0.1, 0), P3(z, sd * h + 0.1, y1), P3(z, sd * h - 0.1, y1)], col, 0.9);
     D.poly3(R.cam, [P3(z, -h, y1 - 0.08), P3(z, h, y1 - 0.08), P3(z, h, y1 + 0.08), P3(z, -h, y1 + 0.08)], col, 0.9);
-    text3(D, R, P3(z + (back ? 0.2 : -0.2), 0, y1 + 0.6), label, 0.7, '#ffffff', { far: 110, stroke: col });
+    D.print(R.cam, P3(z - 0.02, -h, y1 + 1.1), P3(z - 0.02, h, y1 + 1.1), P3(z - 0.02, -h, y1 + 0.15), label, { w: 2 * h, h: 0.95, stroke: col, fill: 0.75 });
   }
   function bigClock(g, x, y, r, t) {                                 // the clock face over the past, running backwards
     g.save(); g.globalAlpha = 0.35;
@@ -839,6 +839,54 @@
     return v;
   }
 
+  // ---- the finish: 數讀房市 itself. Past the finish its logo stands in the void as big as a building (the site's own,
+  // in its dark colours: assets/site/logo_dark.svg), on dark glass framed in light that beats with the music, held up on
+  // two beams of light; screens of charts hang either side behind the stands (made-up figures, as every curve the game
+  // draws itself)
+  const LOGO = { z: FINISH + 62, w: 46 };
+  const LOGO_IMG = (() => {
+    if (typeof Image === 'undefined') return null;
+    const im = new Image(), o = { cv: im, w: 0, h: 0 };
+    im.onload = () => { o.w = im.naturalWidth || 1460; o.h = im.naturalHeight || 420; };
+    im.src = 'assets/site/logo_dark.svg';
+    return o;
+  })();
+  const SCREENS = (() => {
+    const r = rng(3030), out = [];
+    for (const sd of [-1, 1]) for (const z of [FINISH - 40, FINISH - 18, FINISH + 6]) {
+      const v = []; let x = 0.3 + r() * 0.2;
+      for (let k = 0; k < 8; k++) { x = clamp(x + (r() - 0.4) * 0.25, 0.1, 0.95); v.push(x); }
+      out.push({ z, x: sd * 16, sd, v, kind: r() < 0.5 ? 'bars' : 'line', col: r() < 0.5 ? C.orange : C.cyan, y: 3.5 + r() * 2.5 });
+    }
+    return out;
+  })();
+  function logoMonument(D, R) {
+    const { cam } = R, z = LOGO.z, y = gy(z), w = LOGO.w, h = w * 210 / 730, y0 = y + 20, f = z - 0.05, p = pulse(4);   // (high: over the finish arch's floating name, seen from before it)
+    for (const sd of [-1, 1]) {                                    // the beams holding it up
+      const X = sd * w * 0.3;
+      D.poly3(cam, [[X - 1.2, y, z + 0.5], [X + 1.2, y, z + 0.5], [X + 0.5, y0, z + 0.5], [X - 0.5, y0, z + 0.5]], C.orange, 0.18 + 0.12 * p);
+      D.poly3(cam, [[X - 0.15, y, z + 0.45], [X + 0.15, y, z + 0.45], [X + 0.15, y0, z + 0.45], [X - 0.15, y0, z + 0.45]], C.amber, 0.9);
+    }
+    const m = 1.6, fr = (x0, y0_, x1, y1, col, a) => D.poly3(cam, [[x0, y0_, f], [x1, y0_, f], [x1, y1, f], [x0, y1, f]], col, a);
+    fr(-w / 2 - m - 0.6, y0 - m - 0.6, w / 2 + m + 0.6, y0 + h + m + 0.6, C.orange, 0.25 + 0.35 * p);   // (the frame of light, beating)
+    fr(-w / 2 - m, y0 - m, w / 2 + m, y0 + h + m, C.ink, 0.92);
+    D.printImg(cam, [-w / 2, y0 + h, f - 0.02], [w / 2, y0 + h, f - 0.02], [-w / 2, y0, f - 0.02], LOGO_IMG, { w, h, fill: 0.96 });
+  }
+  function screen(D, R, s) {                                       // a chart on a screen of light, facing the course
+    const { cam } = R, X = R.wx(s.z, s.x) - s.sd * 0.02, z0 = s.z, z1 = s.z + 9, y = gy(s.z + 4.5), y0 = y + s.y, y1 = y0 + 5.4, n = [-s.sd, 0, 0];
+    const P = (u, v, dx = 0) => [X - s.sd * dx, lerp(y0, y1, v), lerp(z0, z1, u)];
+    D.poly3(cam, [P(0, 0), P(1, 0), P(1, 1), P(0, 1)], C.panel, 0.88, n);
+    D.poly3(cam, [P(0, 0, 0.01), P(1, 0, 0.01), P(1, 0.03, 0.01), P(0, 0.03, 0.01)], s.col, 1, n);
+    D.poly3(cam, [P(0, 0.97, 0.01), P(1, 0.97, 0.01), P(1, 1, 0.01), P(0, 1, 0.01)], s.col, 1, n);
+    const N = s.v.length;
+    if (s.kind === 'bars') for (let k = 0; k < N; k++) { const u0 = 0.08 + k * 0.84 / N, u1 = u0 + 0.84 / N * 0.6; D.poly3(cam, [P(u0, 0.1, 0.02), P(u1, 0.1, 0.02), P(u1, 0.1 + s.v[k] * 0.78, 0.02), P(u0, 0.1 + s.v[k] * 0.78, 0.02)], k === N - 1 ? C.amber : s.col, 0.9, n); }
+    else for (let k = 0; k < N - 1; k++) {                         // a line, thick enough to read from the course
+      const ua = 0.08 + k * 0.84 / (N - 1), ub = 0.08 + (k + 1) * 0.84 / (N - 1), va = 0.1 + s.v[k] * 0.78, vb = 0.1 + s.v[k + 1] * 0.78;
+      D.poly3(cam, [P(ua, va - 0.03, 0.02), P(ub, vb - 0.03, 0.02), P(ub, vb + 0.03, 0.02), P(ua, va + 0.03, 0.02)], s.col, 1, n);
+    }
+  }
+
+  const GOAL_SIGN = 'GOAL 數讀房市';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#ff9a4a', '#ffd0a0', '#4ad8ff'], trail: '#ff7a2a', light: { col: '#ff6a1a', w: 0.32, k: z => 1 - 0.8 * pageA(z) },   // (faint over the website) ski: ['#ff6a1a', '#ffd0a0', '#4ad8ff'],
     boost: { pad: '#ff6a1a', glow: '#ffb08a', arrow: '#ffffff' },
@@ -899,6 +947,10 @@
       if (ok(TUBE[0] - 12)) add(TUBE[0] - 12, () => portal(D, R, TUBE[0] - 12, '數據隧道', C.orange), false, 0);
       if (zc > RJ - 140 && zc < RLAND + 10) RINGS.forEach(([z, x, y], k) => { if (ok(z, 130)) add(z, () => hoop(D, R, z, x, y, k), false, x); });
       if (zc > FINISH - 80) root.SkiWorld.crowd(R, { z0: FINISH - 36, z1: FINISH + 24, gap: 1.6, y: 0.9, stand: { top: '#14224a', top2: '#1a2a5a', face: '#ff6a1a' } });
+      if (zc > FINISH - 200) {                                     // 數讀房市: its logo ahead, screens of charts behind the stands
+        R.add(LOGO.z, () => logoMonument(root.SkiDraw, R), false, 0);
+        for (const sc of SCREENS) if (sc.z > R.lo - 10 && sc.z < R.hi + 10) R.add(sc.z + 4.5, () => screen(root.SkiDraw, R, sc), false, sc.x);
+      }
     },
     ramp(R, r) {
       const D = root.SkiDraw;
@@ -910,10 +962,10 @@
     },
     gate(R, z, i, label) {
       const D = root.SkiDraw, L = LOOK(z);
-      if (label === 'GOAL') { tickGate(D, R, z, 'GOAL 終點', C.orange, true); return; }
+      if (label === 'GOAL') { tickGate(D, R, z, GOAL_SIGN, C.orange); return; }
       if (label) { tickGate(D, R, z, '起點 START', C.orange); return; }
       if (inWeb(z) || inTube(z) || MED(z) > 0 || course.vertAt(z) || inRings(z) || Math.abs(z - CRASH) < 16 || (z > KICK1 - 10 && z < TURN[1] + 6) || (z > KICK2 - 10 && z < TURN2[1] + 6) || z > THIN[0] - 20) return;   // (none from the line on: the words of 暴漲 are up there)
-      if (L === 1) { tickGate(D, R, z, `${YEAR(z)}`, '#b8892a', true); return; }
+      if (L === 1) { tickGate(D, R, z, `${YEAR(z)}`, '#b8892a'); return; }
       const q = Math.floor(z / 40);
       tickGate(D, R, z, `${2010 + (q % 16)} Q${(q % 4) + 1}`, C.orange);
     },

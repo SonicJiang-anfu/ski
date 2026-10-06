@@ -784,7 +784,7 @@
     D.poly3(cam, [P3(z, -h - 0.6, y1 - 1.1), P3(z, h + 0.6, y1 - 1.1), P3(z, h + 0.6, y1), P3(z, -h - 0.6, y1)], c('#120c26'));
     D.poly3(cam, [P3(z - 0.01, -h, y1 - 1.1), P3(z - 0.01, h, y1 - 1.1), P3(z - 0.01, h, y1 - 0.98), P3(z - 0.01, -h, y1 - 0.98)], col, 0.95);
     D.poly3(cam, [P3(z + 0.01, -h, y1 - 1.1), P3(z + 0.01, h, y1 - 1.1), P3(z + 0.01, h, y1 - 0.98), P3(z + 0.01, -h, y1 - 0.98)], col, 0.95);
-    text3(D, R, P3(z + (cam.C[2] < z ? -0.1 : 0.1), 0, y1 - 0.55), words, big ? 0.85 : 0.7, '#ffffff', { far: 120, stroke: col });
+    D.print(cam, P3(z - 0.02, -h - 0.6, y1), P3(z - 0.02, h + 0.6, y1), P3(z - 0.02, -h - 0.6, y1 - 0.98), words, { w: 2 * h + 1.2, h: 0.98, stroke: col, fill: big ? 0.85 : 0.72 });   // (lit on the sign: it turns with it)
   }
   // the hologram over the plaza: the character she is playing as, as tall as a tower, flickering (she flies straight through its face)
   const HOLOIMG = new Map();
@@ -818,7 +818,7 @@
   }
   function goalGate(D, R, back) {                                         // the finish: a great gate of light (seen from either side: the finish shot looks back at it)
     if (back) return;
-    arch(D, R, FINISH, 'GOAL 終點', N.mag, true);
+    arch(D, R, FINISH, GOAL_SIGN, N.mag, true);
     const { P3, t } = R, h = HW(FINISH) + 0.8;
     for (const sd of [-1, 1]) for (let j = 0; j < 4; j++) glowDot(D, R, P3(FINISH - 0.5, sd * h, 1.5 + j * 1.6), 0.3, j % 2 ? N.cyan : N.mag, 0.5 + 0.4 * Math.sin(t * 6 + j));
   }
@@ -871,6 +871,77 @@
     g.fillStyle = Math.floor(t * 2) % 2 ? '#ff3355' : '#5a1020'; g.fillRect(x - 6, hz - 826, 12, 12);
   }
 
+  // ---- the finish: 霓虹港, the harbour at the end of the megacity. Past the plaza the street stops at the quay (bollards,
+  // its edge lit): dark water with the neon shaking in it, a hover-ferry tied up, a gantry crane outlined in light, the
+  // terminal across the water with the name on its roof, a beacon sweeping; containers stacked behind the stands
+  const QUAY = FINISH + 34, TERM = { z: FINISH + 92, hw: 22, h: 10 };
+  const CONTAINERS = (() => {
+    const r = rng(4040), out = [];
+    for (const sd of [-1, 1]) for (let z = FINISH - 46; z < FINISH + 26; z += 6.8) {
+      const n = 1 + ((r() * 3) | 0);
+      for (let k = 0; k < n; k++) out.push({ z, x: sd * (17 + (k === 2 ? 0 : (r() - 0.5) * 0.6)), y: k * 2.6, col: ['#3a2a6a', '#5a1a4a', '#1a3a5a', '#4a3a1a', '#1a4a3a'][(r() * 5) | 0], neon: NC[(r() * NC.length) | 0] });
+    }
+    return out;
+  })();
+  function harbour(D, R, za, zb, near) {                          // past the quay: the water, the neon trembling in it
+    const { cam, t } = R, y = gy(za) - 1.6, Q = (z0, z1, x0, x1, col, a = 1, up = 0) => D.poly3(cam, [WP(R, z0, x0, y + up), WP(R, z0, x1, y + up), WP(R, z1, x1, y + up), WP(R, z1, x0, y + up)], col, a);
+    Q(za, zb, -110, 110, '#070d22');
+    if (za <= QUAY + 0.01) {                                       // the quay's edge: a wall down to the water, a line of light along it
+      D.poly3(cam, [WP(R, QUAY, -40, gy(QUAY)), WP(R, QUAY, 40, gy(QUAY)), WP(R, QUAY, 40, y), WP(R, QUAY, -40, y)], '#1a1630', 1, [0, 0, -1]);
+      D.poly3(cam, [WP(R, QUAY - 0.02, -40, gy(QUAY) - 0.15), WP(R, QUAY - 0.02, 40, gy(QUAY) - 0.15), WP(R, QUAY - 0.02, 40, gy(QUAY)), WP(R, QUAY - 0.02, -40, gy(QUAY))], N.cyan, 0.9);
+    }
+    if (!near && zb - za > 4) return;
+    for (const [x, col] of [[-9, N.mag], [-3, N.cyan], [6, N.yel], [13, N.mag]]) {   // reflections: broken streaks, wobbling
+      const w = 0.35 + 0.2 * Math.sin(t * 3 + x), dx = Math.sin(t * 2 + za * 0.7 + x) * 0.5;
+      if (Math.floor(za / 2 + x) % 2) Q(za, zb, x + dx - w, x + dx + w, col, 0.35, 0.02);
+    }
+  }
+  function ferry(D, R) {                                           // a hover-ferry tied up at the quay: hull, decks of lit windows, a mast light
+    const { cam, t } = R, z0 = QUAY + 10, z1 = QUAY + 34, x0 = -16, x1 = -3, y = gy(QUAY) - 1.2 + 0.15 * Math.sin(t * 1.3);
+    D.box3(cam, x0, x1, y, y + 2.4, z0, z1, { side: '#d8dce8', rear: '#eef0f6', top: '#9aa0b0' });
+    D.box3(cam, x0 + 1, x1 - 1, y + 2.4, y + 4.4, z0 + 2, z1 - 4, { side: '#2a2a4a', rear: '#3a3a5a', top: '#e8ecf4' });
+    D.box3(cam, x0 + 3, x1 - 3, y + 4.4, y + 6, z0 + 3, z0 + 9, { side: '#2a2a4a', rear: '#3a3a5a', top: '#e8ecf4' });
+    for (let k = 0; k < 9; k++) { const z = lerp(z0 + 2.6, z1 - 4.6, k / 8); D.poly3(cam, [[x1 - 0.98, y + 3, z - 0.5], [x1 - 0.98, y + 3, z + 0.5], [x1 - 0.98, y + 3.8, z + 0.5], [x1 - 0.98, y + 3.8, z - 0.5]], k % 3 ? '#ffe68a' : N.cyan, 1, [1, 0, 0]); }
+    D.poly3(cam, [[x0, y + 0.4, z0 - 0.02], [x1, y + 0.4, z0 - 0.02], [x1, y + 0.7, z0 - 0.02], [x0, y + 0.7, z0 - 0.02]], N.mag, 1, [0, 0, -1]);
+    D.poly3(cam, [[x1 + 0.01, y + 0.4, z0], [x1 + 0.01, y + 0.4, z1], [x1 + 0.01, y + 0.7, z1], [x1 + 0.01, y + 0.7, z0]], N.mag, 1, [1, 0, 0]);
+    glowDot(D, R, [(x0 + x1) / 2, y + 0.1, (z0 + z1) / 2], 3.5, N.cyan, 0.25);   // (the glow it hovers on)
+    glowDot(D, R, [(x0 + x1) / 2, y + 7, z0 + 6], 0.4, '#ff3030', 0.5 + 0.5 * Math.sin(t * 4));
+  }
+  function crane(D, R, X, z) {                                     // a gantry crane: two legs, a beam high over the water, its boom out, outlined in light
+    const { cam } = R, y = gy(QUAY) - 1.6, top = y + 24, col = N.yel;
+    const bar = (a, b, w = 0.25) => D.poly3(cam, [[a[0] - w, a[1], a[2]], [a[0] + w, a[1], a[2]], [b[0] + w, b[1], b[2]], [b[0] - w, b[1], b[2]]], col, 0.9);
+    for (const dz of [0, 8]) { bar([X - 4, y, z + dz], [X - 2.5, top, z + dz]); bar([X + 4, y, z + dz], [X + 2.5, top, z + dz]); }
+    D.box3(cam, X - 3, X + 3, top, top + 2, z - 0.5, z + 8.5, { side: '#3a3550', rear: '#4a4560', top: '#3a3550' });
+    D.box3(cam, X - 0.6, X + 0.6, top + 0.5, top + 1.5, z - 18, z, { side: '#3a3550', rear: '#4a4560', top: '#3a3550' });   // (the boom, out over the quay)
+    D.poly3(cam, [[X - 0.62, top + 0.5, z - 18], [X - 0.62, top + 0.5, z], [X - 0.62, top + 0.7, z], [X - 0.62, top + 0.7, z - 18]], col, 1);
+  }
+  function terminal(D, R) {                                        // the terminal across the water, the name on its roof in neon
+    const { cam, t } = R, z = TERM.z, y = gy(QUAY) - 1.6, { hw, h } = TERM, f = z - 0.02;
+    D.box3(cam, -hw, hw, y, y + h, z, z + 10, { side: '#1e1a3a', rear: '#262046', top: '#14102a' });
+    if (cam.C[2] > z) return;
+    for (let k = 0; k < 12; k++) { const x0 = -hw + 1 + k * (2 * hw - 2) / 12; D.poly3(cam, [[x0 + 0.3, y + 2, f], [x0 + (2 * hw - 2) / 12 - 0.3, y + 2, f], [x0 + (2 * hw - 2) / 12 - 0.3, y + 6, f], [x0 + 0.3, y + 6, f]], k % 4 ? '#2a3a7a' : N.cyan, 0.9); }
+    D.poly3(cam, [[-hw, y + h - 0.3, f], [hw, y + h - 0.3, f], [hw, y + h, f], [-hw, y + h, f]], N.mag);
+    const sw = 26, sy = y + h + 0.6, sh = 5;
+    D.poly3(cam, [[-sw / 2 - 0.6, sy - 0.6, z + 3], [sw / 2 + 0.6, sy - 0.6, z + 3], [sw / 2 + 0.6, sy + sh + 0.6, z + 3], [-sw / 2 - 0.6, sy + sh + 0.6, z + 3]], N.mag, 0.25 + 0.1 * Math.sin(t * 5));
+    D.print(cam, [-sw / 2, sy + sh, z + 2.98], [sw / 2, sy + sh, z + 2.98], [-sw / 2, sy, z + 2.98], '霓虹港', { w: sw, h: sh, color: '#ffe6fa', stroke: N.mag, fill: 0.9 });
+  }
+  function beacon(D, R, X, z) {                                    // a beacon on the breakwater: a tower, a light sweeping round
+    const { cam, t } = R, y = gy(QUAY) - 1.6, top = y + 18;
+    D.box3(cam, X - 1, X + 1, y, top, z - 1, z + 1, { side: '#2a2448', rear: '#3a3458', top: '#3a3458' });
+    for (let k = 1; k < 6; k++) D.poly3(cam, [[X - 1.02, y + k * 3, z - 1.02], [X + 1.02, y + k * 3, z - 1.02], [X + 1.02, y + k * 3 + 0.3, z - 1.02], [X - 1.02, y + k * 3 + 0.3, z - 1.02]], N.cyan, 0.9);
+    const a = t * 1.2, L = 40, b = [X + Math.cos(a) * L, top + 1, z + Math.sin(a) * L];
+    D.poly3(cam, [[X, top + 1.2, z], [b[0] - Math.sin(a) * 4, b[1], b[2] + Math.cos(a) * 4], [b[0] + Math.sin(a) * 4, b[1], b[2] - Math.cos(a) * 4]], '#fff2b0', 0.18);
+    glowDot(D, R, [X, top + 1, z], 1, '#fff2b0', 0.9);
+  }
+  function container(D, R, c) {                                    // a shipping container with lit edges
+    const { cam } = R, y = gy(c.z + 3) + c.y, X = R.wx(c.z, c.x);
+    D.box3(cam, X - 1.2, X + 1.2, y, y + 2.5, c.z, c.z + 6, { side: c.col, rear: mixHex(c.col, '#000000', 0.2), top: mixHex(c.col, '#ffffff', 0.15) });
+    const sd = Math.sign(c.x) || 1, xf = X - sd * 1.21;
+    D.poly3(cam, [[xf, y + 2.3, c.z], [xf, y + 2.3, c.z + 6], [xf, y + 2.5, c.z + 6], [xf, y + 2.5, c.z]], c.neon, 0.9, [-sd, 0, 0]);
+    for (let k = 1; k < 6; k++) D.poly3(cam, [[xf, y + 0.2, c.z + k], [xf, y + 0.2, c.z + k + 0.08], [xf, y + 2.2, c.z + k + 0.08], [xf, y + 2.2, c.z + k]], mixHex(c.col, '#000000', 0.35), 1, [-sd, 0, 0]);
+  }
+
+  const GOAL_SIGN = 'GOAL 霓虹港';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#2ff3ff', '#ff3fd0', '#ffffff'], trail: '#1fb8d0', ski: ['#2ff3ff', '#bffaff', '#ff3fd0'],
     boost: { pad: '#ff3fd0', glow: '#ff9af0', arrow: '#ffffff' },
@@ -909,6 +980,7 @@
     slice(R, za, zb, near) {
       const D = root.SkiDraw, m = (za + zb) / 2;
       if (inAir(m)) return;                                              // (over the abyss: nothing under her)
+      if (m >= QUAY) { harbour(D, R, za, zb, near); return; }            // (past the quay: the harbour)
       if (inBridge(m)) bridgeSlice(D, R, za, zb, near);
       else if (m >= LAND - 3) plazaSlice(D, R, za, zb, near);
       else if (ELEV(m)) trackSlice(D, R, za, zb, near);
@@ -917,7 +989,14 @@
     scenery(R) {
       const D = root.SkiDraw, { add, lo, hi, zc } = R;
       const ok = (z, d = 125) => z > lo && z < hi && Math.abs(z - zc) < d;
-      for (const b of SCENE.towers) if (ok(b.z, 125)) add(b.z, () => tower(D, R, b, fogK(R, b.z, b.x)), false, b.x);
+      for (const b of SCENE.towers) if (ok(b.z, 125) && b.z + b.d / 2 < QUAY - 2) add(b.z, () => tower(D, R, b, fogK(R, b.z, b.x)), false, b.x);   // (none past the quay: the harbour opens out)
+      if (zc > FINISH - 180) {                                     // 霓虹港: the terminal across the water, the ferry, a crane, the beacon; containers behind the stands
+        add(TERM.z + 5, () => terminal(D, R), false, 0);
+        add(QUAY + 22, () => ferry(D, R), false, -9.5);
+        add(QUAY + 18, () => crane(D, R, 15, QUAY + 14), false, 15);
+        add(QUAY + 50, () => beacon(D, R, 30, QUAY + 50), false, 30);
+        for (const c of CONTAINERS) if (ok(c.z, 100)) add(c.z + 3, () => container(D, R, c), false, c.x);
+      }
       for (const h of SCENE.holos) if (ok(h.z, 125)) add(h.z, () => holoAd(D, R, h, fogK(R, h.z, h.x)), false, h.x);
       if (zc > FL[0] - 40 && zc < FL[3]) for (const b of SCENE.hang) if (ok(b.z, 110)) add(b.z, () => hanging(D, R, b, fogK(R, b.z, b.x)), false, b.x);
       for (const s of SCENE.signs) if (ok(s.z, 110)) add(s.z, () => roadSign(D, R, s), false, s.sd * 8);

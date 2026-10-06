@@ -93,18 +93,22 @@
   };
   const CAMEL_COLS = { Y: '#d9a45a', D: '#a8742f', K: '#1a1a1a', R: '#d8443a' };
 
+  // the finish's village, 綠洲村 (drawn further down): its gate, its spring; nothing else of the desert round it
+  const GATE = { z: 1550, tw: 2.8, gap: 4.6, h: 11, wall: 16 }, SPRING = { z: 1462, len: 34, x: -23, hw: 6.5 };
+  const inVillage = (z, x) => z > 1440 && z < 1600 && Math.abs(x) < 36;
   // ---- the park of the desert: dunes, oases (pond, palms, a tent), obelisks, ruins, camels, cacti, far pyramids
   const SCENE = (() => {
     const r = rng(2468), mounds = [], oases = [], palms = [], tents = [], obelisks = [], ruins = [], camels = [], cacti = [], pyramids = [];
     const nearPyr = (z, x, m = 3) => z > PYR[0] - m && z < PYR[0] + 2 * PB + m && Math.abs(x) < PB + m;
     for (let z = 60, k = 0; z < FINISH; z += 120 + r() * 50, k++) {     // oases, alternating sides
       const sd = k % 2 ? 1 : -1, x = sd * (H_ + 13 + r() * 5), len = 12 + r() * 5, w = 7 + r() * 3;
-      if (nearPyr(z, x, 12)) continue;
+      if (nearPyr(z, x, 12) || inVillage(z, x) || inVillage(z + len, x)) continue;
       oases.push({ z, len, x, hw: w / 2 });
       for (let j = 0; j < 5; j++) { const a = j / 5 * Math.PI * 2 + r(); palms.push({ z: z + len / 2 + Math.sin(a) * (len / 2 + 1.6), x: x + Math.cos(a) * (w / 2 + 1.6), h: 4.6 + r() * 2, lean: (r() - 0.5) * 1.8 }); }
       tents.push({ z: z + len + 3, x: x + sd * 4, col: r() < 0.5 ? '#d8443a' : '#2f86c8' });
     }
-    const clear = (z, x, m) => !oases.some(o => z > o.z - m && z < o.z + o.len + m && Math.abs(x - o.x) < o.hw + m) && !nearPyr(z, x);
+    oases.push(SPRING);                                          // (the village's spring)
+    const clear = (z, x, m) => !inVillage(z, x) && !oases.some(o => z > o.z - m && z < o.z + o.len + m && Math.abs(x - o.x) < o.hw + m) && !nearPyr(z, x);
     for (let z = 90, k = 0; z < FINISH + 40; z += 95 + r() * 40, k++) {
       const sd = k % 2 ? -1 : 1, x = sd * (H_ + 15 + r() * 5);
       if (clear(z, x, 4)) obelisks.push({ z, x, h: 11 + r() * 4 });
@@ -313,6 +317,80 @@
     }
   }
 
+  // ---- the finish: 綠洲村, the oasis village at the end of the desert. Its gate straight ahead past the finish (towers,
+  // an arch, the name over it, a wall either side, domes and palms over the wall); behind the stands, a great spring
+  // with palms and a well (left), houses, market stalls and resting camels (right): the finish shot looks across her
+  const ADOBE = { wall: '#f6ead2', side: '#dcc49c', top: '#fff6e2', dark: '#5a3418', trim: '#c8643a', dome: '#3a9ad8', domeS: '#2f78b0', blue: '#2f86c8' };   // (whitewashed, terracotta and blue: the village stands out from the sand)
+  const HOUSES = [{ x: 17, z: 1468, w: 3.2, d: 6, h: 4.2, dome: true }, { x: 16.5, z: 1482, w: 2.6, d: 5, h: 3.4, stall: '#d8443a' }, { x: 17.5, z: 1496, w: 3.4, d: 6, h: 5 },
+    { x: 16.5, z: 1511, w: 2.6, d: 5, h: 3.6, stall: '#1f9a8e' }, { x: -24, z: 1516, w: 3, d: 6, h: 4.4, dome: true },
+    { x: -10, z: 1560, w: 4, d: 7, h: 5.4, dome: true }, { x: 9, z: 1562, w: 4.4, d: 7, h: 6.2 }, { x: 0, z: 1566, w: 3.4, d: 6, h: 7.4, dome: true }];
+  const VPALMS = (() => {                                          // palms round the spring, along the village wall, among the houses
+    const r = rng(9911), out = [];
+    for (let j = 0; j < 9; j++) { const a = j / 9 * Math.PI * 2 + 0.3; out.push({ z: SPRING.z + SPRING.len / 2 + Math.sin(a) * (SPRING.len / 2 + 2), x: SPRING.x + Math.cos(a) * (SPRING.hw + 2), h: 5 + r() * 2.5, lean: (r() - 0.5) * 1.8 }); }
+    for (const x of [-21, -16, 15, 20, 26]) out.push({ z: GATE.z - 3 + r() * 2, x, h: 6 + r() * 2.5, lean: (r() - 0.5) * 1.6 });
+    for (const [z, x] of [[1474, 22], [1504, 23], [1489, 13.6], [1536, 15], [1538, -15], [1575, -4], [1574, 5]]) out.push({ z, x, h: 5.5 + r() * 2.5, lean: (r() - 0.5) * 1.6 });
+    return out.sort((a, b) => a.z - b.z);
+  })();
+  function adobe(D, R, X, z0, d, hw, h, o = {}) {                // a mud-brick house: flat roof with a low parapet, an arched door, maybe a dome or a stall
+    const { cam } = R, yb = course.height(z0 + d), yf = course.height(z0), y0 = Math.max(yb, yf), f = z0 - 0.02;
+    if (yf > yb + 0.05) D.box3(cam, X - hw - 0.2, X + hw + 0.2, yb - 0.3, yf + 0.1, z0 - 0.2, z0 + d + 0.2, { side: ADOBE.trim, rear: ADOBE.side, top: ADOBE.top });   // (on the slope: a stone footing)
+    D.box3(cam, X - hw, X + hw, y0, y0 + h, z0, z0 + d, { side: ADOBE.side, rear: ADOBE.wall, top: ADOBE.top });
+    for (const [a, b, c, e] of [[-hw, hw, 0, 0.3], [-hw, -hw + 0.3, 0, d], [hw - 0.3, hw, 0, d]]) D.box3(cam, X + a, X + b, y0 + h, y0 + h + 0.5, z0 + c, z0 + e, { side: ADOBE.trim, rear: ADOBE.trim, top: '#e08a5a' });   // (the parapet)
+    if (o.dome) {                                                  // a dome on the roof: rings of quads, lit from the left
+      const cx = X, cz = z0 + d / 2, rd = Math.min(hw, d / 2) * 0.8, by = y0 + h, N = 10, M = 4;
+      for (let i = 0; i < M; i++) for (let j = 0; j < N; j++) {
+        const a0 = i / M * Math.PI / 2, a1 = (i + 1) / M * Math.PI / 2, b0 = j / N * Math.PI * 2, b1 = (j + 1) / N * Math.PI * 2;
+        const P = (a, b) => [cx + Math.cos(a) * Math.cos(b) * rd, by + Math.sin(a) * rd * 1.1, cz + Math.cos(a) * Math.sin(b) * rd];
+        const n = [Math.cos(b0 + Math.PI / N), 0.6, Math.sin(b0 + Math.PI / N)];
+        D.poly3(cam, [P(a0, b0), P(a0, b1), P(a1, b1), P(a1, b0)], n[0] < -0.2 ? ADOBE.dome : ADOBE.domeS, 1, n);
+      }
+    }
+    if (cam.C[2] > z0) return;                                     // (the front: from up the course and the finish shot both)
+    const arch = (x0, x1, yy, hh, col, dz) => { const pts = [[x0, yy, f - dz], [x1, yy, f - dz]]; for (let k = 0; k <= 8; k++) { const a = k / 8 * Math.PI; pts.push([(x0 + x1) / 2 + Math.cos(a) * (x1 - x0) / 2, yy + hh - (x1 - x0) / 2 + Math.sin(a) * (x1 - x0) / 2, f - dz]); } D.poly3(cam, pts, col); };
+    arch(X - 0.7, X + 0.7, y0, 2.3, ADOBE.dark, 0);
+    if (hw > 2) for (const sd of [-1, 1]) arch(X + sd * hw * 0.62 - 0.35, X + sd * hw * 0.62 + 0.35, y0 + h * 0.5, 0.9, ADOBE.blue, 0);
+    if (o.stall) {                                                 // a market stall in front: striped cloth on poles, a counter of goods
+      const zs = z0 - 2.2, x0 = X - hw - 0.4, x1 = X + hw + 0.4, ys = y0 + 2.4, n = 6;
+      for (const x of [x0, x1]) D.box3(cam, x - 0.08, x + 0.08, course.height(zs), ys, zs - 0.08, zs + 0.08, { side: '#7a5530', rear: '#9a6a3a', top: '#9a6a3a' });
+      for (let k = 0; k < n; k++) { const a = lerp(x0, x1, k / n), b = lerp(x0, x1, (k + 1) / n); D.poly3(cam, [[a, ys, zs], [b, ys, zs], [b, y0 + h * 0.8, z0 - 0.05], [a, y0 + h * 0.8, z0 - 0.05]], k % 2 ? '#fff4dc' : o.stall); }
+      const yc = course.height(zs + 0.8);
+      D.box3(cam, x0 + 0.3, x1 - 0.3, yc, yc + 0.9, zs + 0.3, zs + 1.3, { side: ADOBE.trim, rear: '#c98a55', top: '#e0a868' });
+      [['#ff8a2a', -1.2], ['#ffd84a', -0.4], ['#d8443a', 0.4], ['#7cc85a', 1.2]].forEach(([col, dx]) => D.box3(cam, X + dx - 0.3, X + dx + 0.3, yc + 0.9, yc + 1.25, zs + 0.5, zs + 1.1, { side: col, rear: col, top: col }));   // (fruit, spices)
+    }
+  }
+  function villageGate(D, R) {                                     // the gate of 綠洲村: two towers, the arch, the name over it, the wall either side
+    const { cam } = R, z = GATE.z, y = course.height(z), d = 3, { tw, gap, h } = GATE, f = z - 0.02;
+    for (const sd of [-1, 1]) {
+      const wa = gap + 2 * tw - 0.1, wb = GATE.wall;
+      D.box3(cam, sd > 0 ? wa : -wb, sd > 0 ? wb : -wa, y, y + 4.2, z + 0.4, z + 1.4, { side: ADOBE.side, rear: ADOBE.wall, top: ADOBE.top });   // (the village wall)
+      const x0 = sd > 0 ? gap : -gap - 2 * tw, x1 = x0 + 2 * tw;
+      D.box3(cam, x0, x1, y, y + h, z, z + d, { side: ADOBE.side, rear: ADOBE.wall, top: ADOBE.top });
+      for (let k = 0; k < 3; k++) { const a = x0 + k * 2 * tw / 2.5, b = a + 2 * tw / 5; D.box3(cam, a, b, y + h, y + h + 0.9, z, z + 0.5, { side: ADOBE.trim, rear: ADOBE.trim, top: '#e08a5a' }); }   // (merlons)
+      D.poly3(cam, [[x0, y + h - 0.7, f], [x1, y + h - 0.7, f], [x1, y + h - 0.35, f], [x0, y + h - 0.35, f]], ADOBE.trim);   // (a band round the top)
+      D.poly3(cam, [[x0 + tw - 0.35, y + h - 2.6, f], [x0 + tw + 0.35, y + h - 2.6, f], [x0 + tw + 0.35, y + h - 1.4, f], [x0 + tw - 0.35, y + h - 1.4, f]], ADOBE.dark);
+    }
+    D.box3(cam, -gap, gap, y + 5.2, y + h - 0.6, z + 0.2, z + d - 0.2, { side: ADOBE.side, rear: ADOBE.wall, top: ADOBE.top });   // the lintel over the arch
+    const pts = [[-gap, y + 5.2, f + 0.2], [-gap, y + 3.2, f + 0.2]];   // (the arch's round top under it)
+    for (let k = 0; k <= 10; k++) { const a = Math.PI - k / 10 * Math.PI; pts.push([Math.cos(a) * gap, y + 3.2 + Math.sin(a) * 1.6, f + 0.2]); }
+    pts.push([gap, y + 5.2, f + 0.2]);
+    D.poly3(cam, pts, ADOBE.wall, 1, [0, 0, -1]);
+    if (cam.C[2] < z) {
+      const sw = 2 * gap - 0.6, y0 = y + 5.5, y1 = y + h - 0.9;
+      D.poly3(cam, [[-sw / 2, y0, f], [sw / 2, y0, f], [sw / 2, y1, f], [-sw / 2, y1, f]], '#2f86c8');
+      D.poly3(cam, [[-sw / 2, y0, f - 0.01], [sw / 2, y0, f - 0.01], [sw / 2, y0 + 0.12, f - 0.01], [-sw / 2, y0 + 0.12, f - 0.01]], '#ffd84a');
+      D.print(cam, [-sw / 2, y1, f - 0.02], [sw / 2, y1, f - 0.02], [-sw / 2, y0 + 0.12, f - 0.02], '綠洲村', { w: sw, h: y1 - y0 - 0.12, color: '#ffffff', fill: 0.8 });
+    }
+  }
+  function well(D, R, X, z) {                                      // a stone well, a little roof on two posts
+    const { cam } = R, y = course.height(z);
+    D.box3(cam, X - 0.9, X + 0.9, y, y + 0.9, z - 0.9, z + 0.9, { side: '#a8875a', rear: '#bc9a6a', top: '#3a6a8a' });
+    for (const sd of [-1, 1]) D.box3(cam, X + sd * 0.8 - 0.08, X + sd * 0.8 + 0.08, y + 0.9, y + 2.6, z - 0.08, z + 0.08, { side: '#7a5530', rear: '#9a6a3a', top: '#9a6a3a' });
+    D.poly3(cam, [[X - 1.2, y + 2.4, z - 1], [X + 1.2, y + 2.4, z - 1], [X, y + 3.2, z - 1]], '#c9955e');
+    D.poly3(cam, [[X - 1.2, y + 2.4, z - 1], [X, y + 3.2, z - 1], [X, y + 3.2, z + 1], [X - 1.2, y + 2.4, z + 1]], '#b07a44', 1, [-1, 1.5, 0]);
+    D.poly3(cam, [[X + 1.2, y + 2.4, z - 1], [X, y + 3.2, z - 1], [X, y + 3.2, z + 1], [X + 1.2, y + 2.4, z + 1]], '#c9955e', 1, [1, 1.5, 0]);
+  }
+
+  const GOAL_SIGN = 'GOAL 綠洲村';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#f6d79a', '#e8bc72', '#fff0c8'], trail: '#d9a95e', ski: ['#c0763a', '#e2a060', '#8a4f22'],
     // warm afternoon sky hazy at the horizon, a big sun, the far dunes; sand to the horizon
@@ -354,6 +432,14 @@
       const D = root.SkiDraw, { cam, add, lo, hi, zc, wx, t } = R;
       // the other mascots cheering on sandstone steps either side of the finish
       if (R.zc > FINISH - 160) root.SkiWorld.crowd(R, { z0: FINISH - 50, z1: FINISH + 25, stand: { top: '#ecc890', top2: '#dcb070', face: '#b07a44' } });
+      if (zc > FINISH - 150) {                                     // 綠洲村: its gate ahead (seen from far up the course), houses, the spring, palms, camels resting
+        add(GATE.z + 1.5, () => villageGate(D, R), false, 0);
+        for (const hs of HOUSES) add(hs.z + hs.d / 2, () => adobe(D, R, hs.x, hs.z, hs.d, hs.w, hs.h, hs), false, hs.x);
+        add(SPRING.z + SPRING.len + 3, () => well(D, R, SPRING.x + 3, SPRING.z + SPRING.len + 3), false, SPRING.x + 3);
+        for (const p of VPALMS) add(p.z, () => palm(D, cam, wx(p.z, p.x), p.z, gy(p.z), p.h, p.lean, Math.abs(p.z - zc) > 60), false, p.x);
+        add(1530, () => tent(D, cam, wx(1530, -15), 1530, gy(1530), '#d8443a'), false, -15);
+        [[23, 1477, 0], [24.5, 1487, 1.3], [22.5, 1500, 2.1]].forEach(([x, z, ph]) => add(z, () => R.billboard({ cs: 0.17, rows: PIX.camel[Math.floor(t * 0.8 + ph) % 2], cols: CAMEL_COLS }, z, x, 0), false, x));
+      }
       const inside = zc >= PYR[0] && zc <= PYR[1], hidden = z => inside && z < PYR[1] + 2;   // from inside only what lies past the exit
       const gy = z => course.height(z), ok = (z, m = 0) => z > lo - m && z < hi && !hidden(z);
       if (!inside && zc < PYR[0] && PYR[0] < hi) add(PYR[0] - 0.05, () => pyramid(D, R));
@@ -384,8 +470,7 @@
       const f = D.poly3(cam, [P3(z, -x + 0.4, y0 - h), P3(z, x - 0.4, y0 - h), P3(z, x - 0.4, y1 - h), P3(z, -x + 0.4, y1 - h)], col);
       D.poly3(cam, [P3(z - 0.01, -x + 0.4, y0 - h), P3(z - 0.01, x - 0.4, y0 - h), P3(z - 0.01, x - 0.4, y0 - h + 0.16), P3(z - 0.01, -x + 0.4, y0 - h + 0.16)], '#ffd84a');
       if (f && label) {
-        const q = D.toCam(cam, P3(z, 0, (y0 + y1) / 2 - h));
-        if (q[2] > 1) { const [sx, sy] = D.scr(cam, q), s2 = cam.F / q[2]; D.txt(label, sx, sy + s2 * 0.42, { size: Math.round(s2 * 1.15), color: '#ffffff', align: 'center', ls: Math.round(s2 * 0.1) }); }
+        D.print(cam, P3(z - 0.02, -x + 0.4, y1 - h), P3(z - 0.02, x - 0.4, y1 - h), P3(z - 0.02, -x + 0.4, y0 + 0.16 - h), label === 'GOAL' ? GOAL_SIGN : label, { w: 2 * x - 0.8, h: y1 - y0 - 0.16 });   // (printed on the banner: it leans with it)
       }
     },
     obstacle(R, o, i) {

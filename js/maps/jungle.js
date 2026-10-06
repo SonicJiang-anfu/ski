@@ -814,6 +814,73 @@
     foamRing(D, R, o.z, x, 1.1);
   }
 
+  // ---- the finish: 河口漁村, the fishing village where the river runs out into the sea. Past the finish the banks give way
+  // to open water (the sea to the horizon ahead); the village's sign stands in the water, a jetty runs out with fishing
+  // boats tied up, huts stand on stilts either side of the mouth, a lighthouse on the point; behind the stands (the finish
+  // shot looks across her at them) more huts, nets hung up to dry, racks of fish, canoes pulled up on the sand
+  const MOUTH = FINISH + 28, SEA = ['#2f93c4', '#3399c8'];
+  const VHUTS = [[-19, FINISH - 44], [19.5, FINISH - 34], [-19.5, FINISH - 22], [19, FINISH - 6], [-19, FINISH + 8], [19, FINISH + 18],
+    [-13, FINISH + 54], [-18, FINISH + 62], [14, FINISH + 52], [-12.5, FINISH + 72]];
+  function sea(D, R, za, zb, near) {                               // the open sea past the river's mouth, swells rolling in
+    const { cam, P3, t } = R, k = ((Math.floor(za / 6) % 2) + 2) % 2;
+    D.poly3(cam, [P3(za, -SKW, 0.004), P3(za, SKW, 0.004), P3(zb, SKW, 0.004), P3(zb, -SKW, 0.004)], SEA[k]);
+    if (near) for (let j = 0; j < 3; j++) {
+      const wz = MOUTH + 70 - ((t * 2.5 + j * 23) % 70), a = Math.max(za, wz), b = Math.min(zb, wz + 0.6);
+      if (b > a) D.poly3(cam, [P3(a, -SKW, 0.01), P3(a, SKW, 0.01), P3(b, SKW, 0.01), P3(b, -SKW, 0.01)], '#e8f8ff', 0.45);
+    }
+    if (za < MOUTH + 2) for (const sd of [-1, 1]) {               // where the beach ends: sand curling away into the water
+      const q = (z, x) => P3(z, sd * x, 0.006);
+      D.poly3(cam, [q(za, HW(za) + 1), q(za, HW(za) + 7), q(Math.min(zb, MOUTH + 2), HW(za) + 22), q(Math.min(zb, MOUTH + 2), HW(za) + 12)], C.sand[0]);
+    }
+  }
+  function boat(D, cam, X, z, y0, col) {                           // a fishing boat tied up: hull, a little wheelhouse, a mast and a flag
+    const w = 1.3, L = 3.2;
+    D.box3(cam, X - w, X + w, y0 - 0.2, y0 + 0.8, z - L, z + L, { side: col, rear: mixHex(col, '#000000', 0.2), top: '#c9a06a' });
+    D.poly3(cam, [[X - w, y0 + 0.8, z - L], [X + w, y0 + 0.8, z - L], [X, y0 + 1.2, z - L - 1.2]], mixHex(col, '#ffffff', 0.25));
+    D.box3(cam, X - 0.8, X + 0.8, y0 + 0.8, y0 + 2.2, z + 0.4, z + 2.2, { side: '#e6edf5', rear: '#ffffff', top: '#c82e28' });
+    D.box3(cam, X - 0.06, X + 0.06, y0 + 0.8, y0 + 5, z - 0.6, z - 0.48, { side: '#6b4a2e', rear: '#6b4a2e', top: '#6b4a2e' });
+    D.poly3(cam, [[X, y0 + 5, z - 0.55], [X + 1.1, y0 + 4.6, z - 0.55], [X, y0 + 4.2, z - 0.55]], '#ffd84a');
+  }
+  function jetty(D, R) {                                           // a wooden jetty out into the sea, on posts
+    const { cam } = R, x0 = 6.6, x1 = 8.8, z0 = MOUTH + 6, z1 = MOUTH + 70, y = gy(z0);
+    for (let z = z0; z <= z1; z += 4) for (const x of [x0, x1]) D.box3(cam, x - 0.15, x + 0.15, y - 1, y + 1.4, z - 0.15, z + 0.15, { side: '#6b4a2e', rear: '#7a5530', top: '#7a5530' });
+    D.box3(cam, x0 - 0.2, x1 + 0.2, y + 1.0, y + 1.25, z0, z1, { side: '#8a6238', rear: '#9a7040', top: '#b98a4a' });
+  }
+  function lighthouse(D, R, X, z) {                                // on the rocks of the point: red and white bands, the lamp turning
+    const { cam, t } = R, y = gy(z), g = D.ctx;
+    for (const [dx, dz, s] of [[0, 0, 4.5], [-2.5, 2, 3], [2.8, -1.5, 2.6]]) D.box3(cam, X + dx - s, X + dx + s, y - 1, y + s * 0.5, z + dz - s, z + dz + s, { side: '#6a6f78', rear: '#7a7f88', top: '#8a8f98' });
+    const yb = y + 2.2, H = 14;
+    for (let k = 0; k < 6; k++) { const a = yb + H * k / 6, b = yb + H * (k + 1) / 6, w = lerp(1.8, 1.2, k / 6); D.box3(cam, X - w, X + w, a, b, z - w, z + w, { side: k % 2 ? '#e8413a' : '#ffffff', rear: k % 2 ? '#ff5a4a' : '#f4f8ff', top: '#ffffff' }); }
+    const lt = yb + H;
+    D.box3(cam, X - 1.5, X + 1.5, lt, lt + 0.3, z - 1.5, z + 1.5, { side: '#3a3f4c', rear: '#3a3f4c', top: '#4a4f5c' });
+    D.box3(cam, X - 1, X + 1, lt + 0.3, lt + 2, z - 1, z + 1, { side: '#ffe68a', rear: '#fff2b0', top: '#ffe68a' });
+    D.poly3(cam, [[X - 1.3, lt + 2, z - 1.3], [X + 1.3, lt + 2, z - 1.3], [X, lt + 3.4, z]], '#c82e28');
+    const q = D.toCam(cam, [X, lt + 1.1, z]);                      // the lamp's glow, pulsing as it turns
+    if (q[2] > 1) { const [sx, sy] = D.scr(cam, q), rr = cam.F / q[2] * (2.2 + 1.2 * Math.max(0, Math.sin(t * 2))); g.save(); g.globalAlpha *= 0.35; g.fillStyle = '#fff2b0'; g.beginPath(); g.arc(sx, sy, rr, 0, 7); g.fill(); g.restore(); }
+  }
+  function nets(D, R, X, z) {                                      // fishing nets hung up to dry between poles
+    const { cam } = R, y = gy(z);
+    for (const dz of [-3, 0, 3]) D.box3(cam, X - 0.1, X + 0.1, y, y + 3.2, z + dz - 0.1, z + dz + 0.1, { side: '#6b4a2e', rear: '#7a5530', top: '#7a5530' });
+    for (const [a, b] of [[-3, 0], [0, 3]]) {
+      D.poly3(cam, [[X, y + 3, z + a], [X, y + 3, z + b], [X, y + 0.8, z + b - 0.4], [X, y + 1.2, z + a + 0.4]], '#5a8a9a', 0.55);
+      for (let k = 1; k < 5; k++) { const zz = z + a + (b - a) * k / 5; D.poly3(cam, [[X - 0.01, y + 3, zz - 0.02], [X - 0.01, y + 3, zz + 0.02], [X - 0.01, y + 1, zz + 0.02], [X - 0.01, y + 1, zz - 0.02]], '#2e5a68', 0.8); }
+    }
+  }
+  function fishRack(D, R, X, z) {                                  // a rack of fish drying in the sun
+    const { cam } = R, y = gy(z);
+    for (const dz of [-2, 2]) D.box3(cam, X - 0.08, X + 0.08, y, y + 2.2, z + dz - 0.08, z + dz + 0.08, { side: '#6b4a2e', rear: '#7a5530', top: '#7a5530' });
+    D.box3(cam, X - 0.06, X + 0.06, y + 2.1, y + 2.25, z - 2.2, z + 2.2, { side: '#6b4a2e', rear: '#7a5530', top: '#7a5530' });
+    for (let k = 0; k < 7; k++) { const zz = z - 1.7 + k * 0.57; D.poly3(cam, [[X - 0.02, y + 2.1, zz - 0.15], [X - 0.02, y + 2.1, zz + 0.15], [X - 0.02, y + 1.3, zz]], k % 2 ? '#b8c4d2' : '#9aa8b8'); }
+  }
+  function villageSign(D, R) {                                     // the village's name on a board on two posts, standing in the water
+    const { cam } = R, z = MOUTH + 22, y = gy(z), sw = 10, y0 = y + 2.6, y1 = y + 5.2, f = z - 0.2;
+    for (const sd of [-1, 1]) D.box3(cam, sd * 4 - 0.2, sd * 4 + 0.2, y - 0.5, y1 + 0.4, z - 0.2, z + 0.2, { side: '#6b4a2e', rear: '#7a5530', top: '#7a5530' });
+    D.box3(cam, -sw / 2, sw / 2, y0, y1, z - 0.15, z + 0.15, { side: '#7a5530', rear: '#9a6a3a', top: '#b98a4a' });
+    D.poly3(cam, [[-sw / 2 - 0.4, y1, f - 0.2], [sw / 2 + 0.4, y1, f - 0.2], [0, y1 + 1.2, f - 0.2]], '#e2bf62');   // (a little thatch over it)
+    if (cam.C[2] < z) D.print(cam, [-sw / 2, y1, f - 0.01], [sw / 2, y1, f - 0.01], [-sw / 2, y0, f - 0.01], '河口漁村', { w: sw, h: y1 - y0, color: '#fff2c8', stroke: '#4a3018', fill: 0.72 });
+  }
+
+  const GOAL_SIGN = 'GOAL 河口漁村';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#ffffff', '#c8f2ff', '#8fe0f5'], trail: '#c8f4fb', ski: ['#ffd23f', '#fff1a0', '#e0a800'],
     flow: { lane: '#a6fbff', edge: '#ffffff', mark: '#ffffff' },
@@ -842,6 +909,8 @@
       D.rect(0, top, W, H - top + 1, '#2d6e3e');
       if (hz > -200) horizon(D, g, hz, pan, zc, W, t);
       else canopyBelow(D, R);
+      const sk = seg(zc, FINISH - 220, FINISH - 140);              // nearing the village: the sea ahead, out to the horizon
+      if (sk > 0 && hz > -200) D.rect(W / 2 + pan - 1400, hz - 2, 2800, H - hz + 3, '#3399c8', sk);
     },
     ground(R, za, zb, near) { if (R.cam.pitch < 0.9) gorge(root.SkiDraw, R, za, zb, near); },   // (down the sheer fall the gorge is behind its rock)
     // one slice: the river between rock banks with the jungle floor beyond (a waterfall's face, the aqueduct or the
@@ -887,9 +956,21 @@
       for (const f of SCENE.flowers) if (ok(f.z, 35)) add(f.z, () => R.billboard(f.c ? PIX.flower : { ...PIX.flower, cols: { ...PIX.flower.cols, R: '#ffb43a', Y: '#ffffff' } }, f.z, f.x, 0));
       for (const h of SCENE.heads) if (ok(h.z)) add(h.z, () => { stoneHead(D, cam, wx(h.z, h.x), h.z, gy(h.z), h.h); if (Math.abs(h.z - zc) < 50) R.billboard(PIX.toucan, h.z - 0.5, h.x + 0.6, h.h); });
       for (const r of SCENE.ruins) if (ok(r.z)) r.cols.forEach(c => add(r.z + c.dz, () => column(D, cam, wx(r.z + c.dz, r.x), r.z + c.dz, gy(r.z + c.dz), c.h)));
-      for (const h of SCENE.huts) if (ok(h.z)) add(h.z, () => hut(D, cam, wx(h.z, h.x), h.z, gy(h.z)));
-      for (const c of SCENE.canoes) if (ok(c.z, 70)) add(c.z, () => canoe(D, cam, wx(c.z, c.x), c.z, gy(c.z)));
-      for (const tc of SCENE.torches) if (ok(tc.z, 70)) add(tc.z, () => torch(D, cam, wx(tc.z, tc.x), tc.z, gy(tc.z), t));
+      const old = z => z > FINISH - 60;                            // (round the finish: the fishing village instead)
+      for (const h of SCENE.huts) if (ok(h.z) && !old(h.z)) add(h.z, () => hut(D, cam, wx(h.z, h.x), h.z, gy(h.z)));
+      for (const c of SCENE.canoes) if (ok(c.z, 70) && !old(c.z)) add(c.z, () => canoe(D, cam, wx(c.z, c.x), c.z, gy(c.z)));
+      for (const tc of SCENE.torches) if (ok(tc.z, 70) && !old(tc.z)) add(tc.z, () => torch(D, cam, wx(tc.z, tc.x), tc.z, gy(tc.z), t));
+      if (zc > FINISH - 160) {                                     // 河口漁村: huts on stilts, the jetty and its boats, the sign, the lighthouse, nets and fish drying, canoes
+        for (const [x, z] of VHUTS) add(z, () => hut(D, cam, wx(z, x), z, gy(z)), false, x);
+        add(MOUTH + 38, () => jetty(D, R), false, 7.7);
+        [[11.2, MOUTH + 26, '#2f86e0'], [11.4, MOUTH + 44, '#e8413a'], [4.2, MOUTH + 60, '#27b07a']].forEach(([x, z, col]) => add(z, () => boat(D, cam, x, z, gy(z), col), false, x));
+        add(MOUTH + 22, () => villageSign(D, R), false, 0);
+        add(MOUTH + 52, () => lighthouse(D, R, -26, MOUTH + 52), false, -26);
+        add(FINISH - 30, () => nets(D, R, -18.5, FINISH - 30), false, -18.5);
+        add(FINISH - 16, () => fishRack(D, R, 18.5, FINISH - 16), false, 18.5);
+        add(FINISH + 2, () => nets(D, R, 18.8, FINISH + 2), false, 18.8);
+        [[-15.5, FINISH - 12], [15.5, FINISH - 48], [-15.2, FINISH + 20]].forEach(([x, z]) => add(z, () => canoe(D, cam, wx(z, x), z, gy(z)), false, x));
+      }
       if (zc > AQ[0] - 60 && zc < AQ[1]) for (let k = 0; k < 10; k++) {   // clouds drifting below the aqueduct
         const z = AQ[0] + 10 + k * 21, x = ((k * 37) % 2 ? 1 : -1) * (10 + (k * 53) % 30) + Math.sin(t * 0.2 + k) * 4;
         if (!ok(z, 125)) continue;
@@ -933,8 +1014,7 @@
       const f = D.poly3(cam, [P3(z, -x + 0.4, y0), P3(z, x - 0.4, y0), P3(z, x - 0.4, y1), P3(z, -x + 0.4, y1)], col);
       for (let gx = -x + 0.8, k = 0; gx < x - 0.6; gx += 1.3, k++) D.poly3(cam, [P3(z - 0.01, gx - 0.35, y0 + 0.05), P3(z - 0.01, gx + 0.35, y0 + 0.05), P3(z - 0.01, gx, y0 - 0.55 - (k % 2) * 0.2)], k % 2 ? '#3a9a48' : '#56b25a');
       if (f && label) {
-        const q = D.toCam(cam, P3(z, 0, (y0 + y1) / 2));
-        if (q[2] > 1) { const [sx, sy] = D.scr(cam, q), s2 = cam.F / q[2]; D.txt(label, sx, sy + s2 * 0.42, { size: Math.round(s2 * 1.15), color: '#ffffff', align: 'center', ls: Math.round(s2 * 0.1) }); }
+        D.print(cam, P3(z - 0.02, -x + 0.4, y1), P3(z - 0.02, x - 0.4, y1), P3(z - 0.02, -x + 0.4, y0), label === 'GOAL' ? GOAL_SIGN : label, { w: 2 * x - 0.8, h: y1 - y0 });   // (printed on the banner: it leans with it)
       }
     },
     obstacle(R, o, i) {
@@ -988,6 +1068,7 @@
   };
   // the river between its banks over [za, zb] (inside the cave: just the water, the cave draws the rest)
   function river(D, R, za, zb, near, inCaveNow) {
+    if (za >= MOUTH - 0.01 && !inCaveNow) { sea(D, R, za, zb, near); return; }   // (out of the river's mouth: the sea)
     const { cam, P3 } = R, k = ((Math.floor(za / 8) % 2) + 2) % 2, f = onFace(za, zb), lag = za >= LAGOON, ledge = za >= CAVE[1] && za < BIG[0];
     const sw = f === SHEER ? HW(za) + 9 : SKW;                    // the cliff the sheer fall runs down is narrow: the jungle far below shows round it
     if (!inCaveNow) D.poly3(cam, [P3(za, -sw), P3(za, sw), P3(zb, sw), P3(zb, -sw)], f ? C.rock[k] : ledge ? C.ledge[k] : lag ? C.floor[k] : C.floor[k]);
@@ -1006,7 +1087,7 @@
     }
     if (f === SHEER) sheerWalls(D, R, za, zb, near);
     else if (!inCaveNow && !(f === BIG)) banks(D, R, za, zb, near, lag ? C.sbank : C.bank);
-    if (!inCaveNow && !f && !ledge && !(za >= AQ[1] && za < SHEER[0]) && R.cam.pitch < 0.9) jungleWalls(D, R, za, zb, lag);   // (from straight above they would only be lines)
+    if (!inCaveNow && !f && !ledge && !(za >= AQ[1] && za < SHEER[0]) && R.cam.pitch < 0.9 && za < FINISH - 60) jungleWalls(D, R, za, zb, lag);   // (from straight above they would only be lines; none in the fishing village, which they would cover in the finish shot)
   }
 
   root.SkiMaps.define('jungle', { desc: '叢林急流：衝急流、閃鱷魚、飛越瀑布、穿過沒有牆的空中水道！', course, theme,

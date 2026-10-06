@@ -829,6 +829,57 @@
     for (const zz of [z0, z1]) if (zz >= za && zz < zb) D.poly3(cam, [S3(zz - 0.2, x0 - 0.2, 0.008), S3(zz - 0.2, x1 + 0.2, 0.008), S3(zz, x1 + 0.2, 0.008), S3(zz, x0 - 0.2, 0.008)], '#ffcf3a');
     for (const zz of [z0 - 0.3, z1 + 0.3]) if (zz >= za && zz < zb) stripes(D, R, zz, x0, x1, 0.02, 0.06, '#ffcf3a', '#1a1d26', 8);
   }
+  // ---- the finish: 不夜城, the part of town that never sleeps. Round the finish every building is lit up: neon signs
+  // printed across their fronts, big screens flickering, strings of bulbs across the street; straight ahead a neon gateway
+  // with the name on it, bulbs chasing round its edge; the sky glowing over it all
+  const BRIGHT = [FINISH - 80, FINISH + 95], GATEZ = FINISH + 60;
+  const NEONSIGN = ['KTV', '電影院', '百貨', '拉麵', '遊樂場', '24H', '保齡球', '夜唱', '燒肉', '甜點', '電玩', '酒吧'];
+  const bright = b => b.z1 > BRIGHT[0] && b.z0 < BRIGHT[1];
+  function neonFront(D, R, b) {                                    // a lit-up front: a neon sign across it, a big screen higher up
+    const { cam, t, wx } = R, sd = b.sd, X = b.off - 0.06, P = (z, x, y) => [wx(z, sd * x), y, z], y0 = gy(b.z0) + 4.4, y1 = y0 + 2.4;
+    const z0 = b.z0 + 0.5, z1 = b.z1 - 0.5, col = NEON[b.seed % 6], word = NEONSIGN[b.seed % NEONSIGN.length];
+    D.poly3(cam, [P(z0, X, y0 - 0.2), P(z1, X, y0 - 0.2), P(z1, X, y1 + 0.2), P(z0, X, y1 + 0.2)], col, 0.4 + 0.15 * Math.sin(t * 3 + b.seed), [-sd, 0, 0]);   // (its glow)
+    D.poly3(cam, [P(z0 + 0.2, X - 0.01, y0), P(z1 - 0.2, X - 0.01, y0), P(z1 - 0.2, X - 0.01, y1), P(z0 + 0.2, X - 0.01, y1)], '#14101e', 1, [-sd, 0, 0]);
+    D.print(cam, P(z0 + 0.2, X - 0.03, y1), P(z1 - 0.2, X - 0.03, y1), P(z0 + 0.2, X - 0.03, y0), word, { w: z1 - z0 - 0.4, h: y1 - y0, color: '#ffffff', stroke: col, fill: 0.7 });
+    if (b.h < 16) return;
+    const s0 = gy(b.z0) + 9.5, s1 = Math.min(gy(b.z0) + b.h - 1.5, s0 + 6), n = 4;   // a big screen: bands of colour sweeping across it
+    D.poly3(cam, [P(z0, X - 0.02, s0 - 0.25), P(z1, X - 0.02, s0 - 0.25), P(z1, X - 0.02, s1 + 0.25), P(z0, X - 0.02, s1 + 0.25)], '#1a1d26', 1, [-sd, 0, 0]);
+    for (let k = 0; k < n; k++) {
+      const c = NEON[(k + Math.floor(t * 1.5) + b.seed) % 6], ya = lerp(s0, s1, k / n), yb = lerp(s0, s1, (k + 1) / n);
+      D.poly3(cam, [P(z0 + 0.2, X - 0.03, ya), P(z1 - 0.2, X - 0.03, ya), P(z1 - 0.2, X - 0.03, yb), P(z0 + 0.2, X - 0.03, yb)], c, 0.85, [-sd, 0, 0]);
+    }
+  }
+  function bulbs(D, R, z) {                                        // a string of bulbs across the street, sagging, twinkling
+    const { cam, t } = R, g = D.ctx, h = HW(z) + 2.6, y = gy(z) + 9.5, n = 18;
+    for (let k = 0; k <= n; k++) {
+      const u = k / n, x = lerp(-h, h, u), yy = y - Math.sin(u * Math.PI) * 1.4, q = D.toCam(cam, [R.wx(z, x), yy, z]);
+      if (q[2] < 1) continue;
+      const [sx, sy] = D.scr(cam, q), s = Math.max(2, cam.F / q[2] * 0.16), on = (Math.floor(t * 4) + k) % 3 !== 0;
+      g.save(); g.globalAlpha *= on ? 1 : 0.4; g.fillStyle = NEON[(k + Math.round(z)) % 6]; g.fillRect(sx - s, sy - s, s * 2, s * 2); g.restore();
+    }
+  }
+  function neonGate(D, R) {                                        // the gateway of 不夜城 across the street: lit posts, the name, bulbs chasing round it
+    const { cam, t } = R, z = GATEZ, y = gy(z), h = HW(z) + 1.2, top = y + 13, sy0 = y + 8.6, g = D.ctx, f = z - 0.3;
+    for (const sd of [-1, 1]) {
+      D.box3(cam, sd * h - 0.5, sd * h + 0.5, y, top, z - 0.5, z + 0.5, { side: '#2a2d36', rear: '#3a3f4c', top: '#3a3f4c' });
+      for (let k = 0; k < 6; k++) { const ya = y + 1 + k * 1.2; D.poly3(cam, [[sd * h - 0.4, ya, z - 0.52], [sd * h + 0.4, ya, z - 0.52], [sd * h + 0.4, ya + 0.6, z - 0.52], [sd * h - 0.4, ya + 0.6, z - 0.52]], NEON[(k + Math.floor(t * 3)) % 6]); }
+    }
+    const x0 = -h - 1.5, x1 = h + 1.5;
+    D.poly3(cam, [[x0 - 0.5, sy0 - 0.5, f + 0.05], [x1 + 0.5, sy0 - 0.5, f + 0.05], [x1 + 0.5, top + 0.5, f + 0.05], [x0 - 0.5, top + 0.5, f + 0.05]], '#ff4fa8', 0.35 + 0.1 * Math.sin(t * 4));   // (its glow)
+    D.box3(cam, x0, x1, sy0, top, z - 0.3, z + 0.3, { side: '#1a1428', rear: '#14101e', top: '#2a2438' });
+    if (cam.C[2] < z) D.print(cam, [x0 + 0.6, top - 0.5, f - 0.02], [x1 - 0.6, top - 0.5, f - 0.02], [x0 + 0.6, sy0 + 0.5, f - 0.02], '不夜城', { w: x1 - x0 - 1.2, h: top - sy0 - 1, color: '#fff2fa', stroke: '#ff4fa8', fill: 0.85 });
+    const per = 2 * (x1 - x0) + 2 * (top - sy0), N = 44;           // bulbs chasing round the board's edge
+    for (let k = 0; k < N; k++) {
+      let d = (k / N) * per, p;
+      if (d < x1 - x0) p = [x0 + d, top]; else if ((d -= x1 - x0) < top - sy0) p = [x1, top - d]; else if ((d -= top - sy0) < x1 - x0) p = [x1 - d, sy0]; else p = [x0, sy0 + d - (x1 - x0)];
+      const q = D.toCam(cam, [p[0], p[1], f - 0.04]);
+      if (q[2] < 1) continue;
+      const [sx, sy] = D.scr(cam, q), s = Math.max(2, cam.F / q[2] * 0.14), on = (k + Math.floor(t * 10)) % 4 === 0;
+      g.fillStyle = on ? '#ffffff' : '#ffd84a'; g.fillRect(sx - s, sy - s, s * 2, s * 2);
+    }
+  }
+
+  const GOAL_SIGN = 'GOAL 不夜城';                             // (on the finish arch: where the long way down arrives)
   const theme = {
     spray: ['#ffd27a', '#ff9a3a', '#ffffff'], trail: '#9aa0ad', ski: ['#ff4fa8', '#ff9ad0', '#c8207a'],
     boost: { pad: '#3ff2ff', glow: '#b46cff', arrow: '#ffffff' },
@@ -853,6 +904,8 @@
       D.rect(0, top, W, H - top + 1, '#10162a');
       skyline(D, g, hz, pan, zc, W, t);
       if (zc > FINISH - 260) fireworks(D, g, hz, W, t, seg(zc, FINISH - 260, FINISH - 160));
+      const gk = seg(zc, FINISH - 240, FINISH - 120);              // 不夜城 ahead: the sky glowing over it
+      if (gk > 0) { const gr = g.createLinearGradient(0, hz - 300, 0, hz + 10); gr.addColorStop(0, 'rgba(255,79,168,0)'); gr.addColorStop(1, `rgba(255,120,190,${0.45 * gk})`); g.fillStyle = gr; g.fillRect(0, hz - 300, W, 310); }
     },
     ground(R, za, zb, near) { below(root.SkiDraw, R, za, zb, near); },
     slice(R, za, zb, near) {
@@ -890,10 +943,13 @@
       const inside = zn === 'office';
       if (!inside) {
         for (const b of SCENE.bld) if (ok(b.z0, 115) || ok(b.z1, 115)) {   // (looking ahead, sorted by its far end, so whatever stands in the street is drawn over it; from the side by where it really stands)
-          if (R.cam.f[2] > 0.6) add(Math.min(b.z1, hi - 1), () => building(D, R, b));
-          else add((b.z0 + b.z1) / 2, () => building(D, R, b), false, b.sd * (b.off + b.d / 2));
+          const draw = bright(b) ? () => { building(D, R, b); neonFront(D, R, b); } : () => building(D, R, b);   // (round the finish: lit up, 不夜城)
+          if (R.cam.f[2] > 0.6) add(Math.min(b.z1, hi - 1), draw);
+          else add((b.z0 + b.z1) / 2, draw, false, b.sd * (b.off + b.d / 2));
         }
         for (const s of SCENE.stalls) if (ok(s.z, 80)) add(s.z, () => stall(D, R, s));
+        for (let z = FINISH - 60; z <= FINISH + 50; z += 10) if (ok(z, 115)) add(z, () => bulbs(D, R, z));
+        if (zc > FINISH - 220) add(GATEZ, () => neonGate(D, R), false, 0);
         for (const s of SCENE.scoots) if (ok(s.z, 40)) add(s.z, () => scooterPark(D, R, s));
         for (const l of SCENE.lamps) if (ok(l.z, 115)) add(l.z, () => lamp(D, R, l));
         for (const a of SCENE.ads) if (ok(a.z, 125)) add(a.z, () => ad(D, R, a));
@@ -928,7 +984,7 @@
         for (const sd of [-1, 1]) { const X = wx(z, sd * h); D.box3(cam, X - 0.18, X + 0.18, y, y + 8, z - 0.18, z + 0.18, { side: '#6a6f7c', rear: '#7a7f8c', top: '#7a7f8c' }); }
         D.poly3(cam, [P3(z, -h, 7.6), P3(z, h, 7.6), P3(z, h, 8), P3(z, -h, 8)], '#6a6f7c');
         const SG = [['機場', '市中心'], ['夜市', '港口'], ['機場', '高架橋'], ['北', '南']][i % 4];
-        SG.forEach((s, k) => { const x0 = k ? 0.6 : -h + 0.8, x1 = k ? h - 0.8 : -0.6; D.poly3(cam, [P3(z - 0.02, x0, 5.2), P3(z - 0.02, x1, 5.2), P3(z - 0.02, x1, 7.5), P3(z - 0.02, x0, 7.5)], '#1f7a4a'); D.poly3(cam, [P3(z - 0.03, x0 + 0.1, 5.3), P3(z - 0.03, x1 - 0.1, 5.3), P3(z - 0.03, x1 - 0.1, 5.38), P3(z - 0.03, x0 + 0.1, 5.38)], '#ffffff'); text3(D, R, P3(z - 0.04, (x0 + x1) / 2, 6.35), s, 1.1, '#ffffff', { far: 110 }); });
+        SG.forEach((s, k) => { const x0 = k ? 0.6 : -h + 0.8, x1 = k ? h - 0.8 : -0.6; D.poly3(cam, [P3(z - 0.02, x0, 5.2), P3(z - 0.02, x1, 5.2), P3(z - 0.02, x1, 7.5), P3(z - 0.02, x0, 7.5)], '#1f7a4a'); D.poly3(cam, [P3(z - 0.03, x0 + 0.1, 5.3), P3(z - 0.03, x1 - 0.1, 5.3), P3(z - 0.03, x1 - 0.1, 5.38), P3(z - 0.03, x0 + 0.1, 5.38)], '#ffffff'); D.print(cam, P3(z - 0.04, x0, 7.5), P3(z - 0.04, x1, 7.5), P3(z - 0.04, x0, 5.38), s, { w: x1 - x0, h: 7.5 - 5.38, fill: 0.55 }); });   // (printed on the sign board)
         return;
       }
       const col = label ? D.C.orange : NEON[i % NEON.length], y0 = label ? 5.8 : 6.0, y1 = label ? 7.3 : 7.0;
@@ -937,8 +993,8 @@
       const f = D.poly3(cam, [P3(z, -h + 0.4, y0), P3(z, h - 0.4, y0), P3(z, h - 0.4, y1), P3(z, -h + 0.4, y1)], label ? col : '#141826');
       if (!label) for (const yy of [y0, y1 - 0.1]) D.poly3(cam, [P3(z - 0.01, -h + 0.4, yy), P3(z - 0.01, h - 0.4, yy), P3(z - 0.01, h - 0.4, yy + 0.1), P3(z - 0.01, -h + 0.4, yy + 0.1)], col);
       if (f) {
-        const q = D.toCam(cam, P3(z, 0, (y0 + y1) / 2));
-        if (q[2] > 1) { const [sx, sy] = D.scr(cam, q), s2 = cam.F / q[2]; D.txt(label || ['夜市', '霓虹街', '宵夜', '晚安'][i % 4], sx, sy + s2 * 0.42, { size: Math.round(s2 * 1.1), color: label ? '#ffffff' : col, align: 'center', ls: Math.round(s2 * 0.1) }); }
+        const word = label === 'GOAL' ? GOAL_SIGN : label || ['夜市', '霓虹街', '宵夜', '晚安'][i % 4], top = label ? y1 : y1 - 0.1, bot = label ? y0 : y0 + 0.1;   // (printed on the sign: it leans with it)
+        D.print(cam, P3(z - 0.02, -h + 0.4, top), P3(z - 0.02, h - 0.4, top), P3(z - 0.02, -h + 0.4, bot), word, { w: 2 * h - 0.8, h: top - bot, color: label ? '#ffffff' : col });
       }
     },
     obstacle(R, o, i) {
