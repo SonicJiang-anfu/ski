@@ -7,6 +7,7 @@
   const ORANGE_SOFT = '#ffb27d';
   const TITLE = '雪坡大冒險';
   const RANK_COL = { S: '#f7c531', A: D.C.orange, B: '#2a6fd6', C: '#8090b8' };
+  const RANK_DARK = { S: '#a87a08', A: '#a83a08', B: '#164a9a', C: '#4a5878' };
 
   function layout() {
     const W = D.W, H = D.H, P = D.P;
@@ -147,6 +148,29 @@
     const h = Math.round(D.H * 0.09 * E.out(k));
     if (h > 0) { D.rect(0, 0, D.W, h, '#071a40'); D.rect(0, D.H - h, D.W, h, '#071a40'); }
   }
+  // between the map and the countdown: the chosen character pops in, a speech bubble with it, 會贏喔！; u: 0..1 over it
+  function intro(char, u, t) {
+    const W = D.W, H = D.H, g = D.ctx, out = seg(u, 0.82, 1), inn = E.back(seg(u, 0, 0.28)), bub = E.back(seg(u, 0.16, 0.4));
+    D.rect(0, 0, W, H, 'rgba(7,26,64,1)', 0.35 * (1 - out));
+    const s = D.P ? 9 : 8, cx = D.P ? W * 0.27 : W * 0.36, by = D.P ? H * 0.62 : H * 0.8, hop = Math.abs(Math.sin(t * 9)) * 10;
+    g.save(); g.globalAlpha *= 1 - out;
+    g.save(); g.translate(cx - (1 - inn) * W * 0.5, by - hop);
+    D.shadowEll(0, hop, 20 * s * 0.55, 0.18);
+    D.spr(char + ((t * 0.9) % 3.3 < 0.16 ? '_ski_front_blink' : '_ski_front'), 0, 0, s);   // (on her skis, poles in hand)
+    g.restore();
+    if (bub > 0) {                                                  // the bubble: up and to the right of her, its tail pointing back at her
+      const bw = D.P ? 560 : 600, bh = D.P ? 210 : 200, bx = cx + 20 * s * 0.6, byy = by - 48 * s - bh * 0.15;
+      g.save(); g.translate(bx, byy + bh); g.scale(bub, bub); g.translate(-bx, -(byy + bh));
+      g.fillStyle = '#ffffff'; g.strokeStyle = D.C.navy; g.lineWidth = 8; g.lineJoin = 'round';
+      g.beginPath(); g.roundRect(bx, byy, bw, bh, 48); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(bx + 60, byy + bh - 4); g.lineTo(bx - 10, byy + bh + 60); g.lineTo(bx + 130, byy + bh - 4); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(bx + 60, byy + bh); g.lineTo(bx - 10, byy + bh + 60); g.lineTo(bx + 130, byy + bh); g.stroke();
+      D.txt('會贏喔！', bx + bw / 2, byy + bh / 2 + 36, { size: D.P ? 104 : 110, color: D.C.orange, align: 'center', stroke: ['#ffffff', 6] });
+      g.restore();
+    }
+    g.restore();
+  }
+
   function countdown(a) {                                         // a: seconds since the countdown began (3, 2, 1 at 0/1/2, GO at 3)
     const n = Math.floor(a), f = a - n, label = n < 3 ? String(3 - n) : 'GO!';
     if (n > 3 || (n === 3 && f > 0.7)) return;
@@ -237,11 +261,19 @@
     D.txt(m.en, tx + 8, ny + (D.P ? 52 : 46), { size: 24, color: D.C.faint, alpha: al, ls: 4 });
     const sub = !m.ready ? '製作中' : b && b.total > 0 ? `最高分 ${fmtInt(b.total)}` : '尚未挑戰';
     D.txt(sub, tx + tw - 6, ny + (D.P ? 52 : 46), { size: 28, color: D.C.muted, align: 'right', alpha: al });
-    if (m.ready && b && b.total > 0) {                              // rank badge, top right on the picture
-      const rx = tx + tw - 44, ry = ty + 44;
-      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(rx, ry, 32, 0, 7); g.fill();
-      g.lineWidth = 6; g.strokeStyle = RANK_COL[b.rank]; g.beginPath(); g.arc(rx, ry, 32, 0, 7); g.stroke();
-      D.txt(b.rank, rx, ry + 16, { size: 44, color: RANK_COL[b.rank], align: 'center' });
+    if (m.ready && b && b.total > 0) {                              // the best rank so far, top right on the picture: a medal on two ribbons
+      const r = 56, rx = tx + tw - r - 16, ry = ty + r + 14, col = RANK_COL[b.rank], dk = RANK_DARK[b.rank];
+      g.fillStyle = dk;
+      for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(rx + sd * 12, ry); g.lineTo(rx + sd * 40, ry + r + 34); g.lineTo(rx + sd * 26, ry + r + 26); g.lineTo(rx + sd * 16, ry + r + 40); g.lineTo(rx + sd * 2, ry); g.closePath(); g.fill(); }
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.arc(rx + 3, ry + 5, r, 0, 7); g.fill();
+      g.fillStyle = col; g.beginPath(); g.arc(rx, ry, r, 0, 7); g.fill();
+      g.lineWidth = 8; g.strokeStyle = '#ffffff'; g.stroke();
+      g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(rx, ry, r - 13, 0, 7); g.stroke();
+      D.txt(b.rank, rx, ry + 28, { size: 80, color: '#ffffff', align: 'center', stroke: [dk, 8] });
+      if (b.rank === 'S') for (let k = 0; k < 3; k++) {                // (S: glints going round it)
+        const a = o.t * 1.6 + k * 2.1, tw2 = 0.5 + 0.5 * Math.sin(o.t * 5 + k * 2);
+        D.pix(STAR, { X: '#ffffff' }, rx + Math.cos(a) * (r + 14), ry + Math.sin(a) * (r + 14) + 12, 2.2 + 1.6 * tw2);
+      }
     }
   }
   function mapSelect(o) {                                           // o: { sel, pos, t, a, hk, touch, best: { id: {total, rank} }, deny }
@@ -440,5 +472,5 @@
     D.rect(D.W / 2 - 200, D.H / 2 + 40, 400 * p, 10, D.C.orange);
   }
 
-  root.SkiHud = { WORDS, letterbox, layout, mapLayout, mapSelect, selectLayout, select, play, pads, popups, countdown, resumeCount, title, pause, pauseButtons, result, resultButtons, loading, TITLE };
+  root.SkiHud = { WORDS, letterbox, layout, mapLayout, mapSelect, selectLayout, select, play, pads, popups, intro, countdown, resumeCount, title, pause, pauseButtons, result, resultButtons, loading, TITLE };
 })(typeof window !== 'undefined' ? window : globalThis);

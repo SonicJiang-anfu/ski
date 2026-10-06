@@ -50,7 +50,8 @@
     if (G.botPlay) G.bot = botFor(m);
     AU.setTheme(m.id); document.body.style.background = m.bg;
   }
-  function startCountdown() { newRun(); setMode('count'); AU.music(null); }
+  const INTRO = 1.2;                                            // (before 3, 2, 1: the character and her 會贏喔！)
+  function startCountdown() { newRun(); setMode('count'); G.countOff = INTRO; AU.music(null); }
   function openMaps() { G.mapSel = G.mapPos = 0; setMode('maps'); newDemo('snow', G.char); if (!AU.playing()) AU.music('title'); }   // (always opens on 經典雪坡)
   function openSelect() { G.sel = SkiChars.index(G.char); setMode('select'); if (!AU.playing()) AU.music('title'); }
   function backToTitle() { if (G.demoMap !== 'snow' || G.demoChar !== 'anje') newDemo('snow', 'anje'); setMode('title'); }
@@ -273,8 +274,9 @@
       case 'count': {
         for (const [x, y] of inp.taps) if (near(L.pause, x, y)) pauseGame(); else if (near(L.mute, x, y)) AU.setMuted(!AU.muted);
         if (inp.pause) { pauseGame(); break; }
-        while (G.beeps < 3 && G.modeT >= G.beeps) { AU.sfx('count'); G.beeps++; }
-        if (G.modeT >= 3) { AU.sfx('go'); AU.music(MAP().music.race); G.countEnd = G.t; setMode('play'); }
+        const ct = G.modeT - (G.countOff || 0);
+        while (G.beeps < 3 && ct >= G.beeps) { AU.sfx('count'); G.beeps++; }
+        if (ct >= 3) { AU.sfx('go'); AU.music(MAP().music.race); G.countEnd = G.t; setMode('play'); }
         break;
       }
       case 'resume': {                                             // back from the pause menu: 3, 2, 1, GO with everything frozen
@@ -323,7 +325,7 @@
         if (act && act !== 'resume') AU.pauseMusic(false);
         if (act === 'resume') {                                    // the music stays quiet until GO
           AU.sfx('blip'); G.beeps = 0;
-          if (G.paused === 'count') { AU.pauseMusic(false); setMode('count'); } else setMode('resume');
+          if (G.paused === 'count') { AU.pauseMusic(false); setMode('count'); G.countOff = 0; } else setMode('resume');   // (her 會贏喔！ only once)
         }
         if (act === 'restart') { AU.sfx('select'); startCountdown(); }
         if (act === 'home') { AU.sfx('blip'); goHome(); }
@@ -381,7 +383,7 @@
       if (G.mode !== 'goal') HUD.play(st, { muted: AU.muted, hk, char: G.char });
       if (input.touch && G.mode !== 'goal') HUD.pads(input);
       HUD.popups(G.pops, G.t, G.anje, st.course.backK && st.course.backK(st.z) > 0.2 ? (D.P ? 0.6 : 0.56) : null);   // (riding backwards: under the mirror)
-      if (G.mode === 'count') HUD.countdown(G.modeT);
+      if (G.mode === 'count') { const off = G.countOff || 0; if (G.modeT < off) HUD.intro(G.char, G.modeT / off, G.t); else HUD.countdown(G.modeT - off); }
       if (G.mode === 'resume') HUD.resumeCount(G.modeT);
       if (G.mode === 'play' && G.resumeEnd !== undefined) HUD.resumeCount(3, G.t - G.resumeEnd);
       if (G.mode === 'play' && G.countEnd !== undefined) HUD.countdown(3 + G.t - G.countEnd);
@@ -425,7 +427,7 @@
     if (params.get('map')) G.map = SkiMaps.get(params.get('map')).id;
     if (st === 'play' || st === 'pause' || st === 'count') {
       newRun(); if (params.get('z')) warp(G.s, +params.get('z'));
-      setMode(st === 'count' ? 'count' : 'play'); if (st === 'play') G.countEnd = -10;
+      setMode(st === 'count' ? 'count' : 'play'); G.countOff = 0; if (st === 'play') G.countEnd = -10;
       if (st === 'pause') { G.paused = 'play'; setMode('pause'); G.focus = 'resume'; }
     } else if (st === 'result') {
       newRun(); const m = MAP(); warp(G.s, m.course.FINISH + 20); G.s.mode = 'done'; G.s.finishTime = 72.34; G.s.coins = 82; G.s.crashes = 2;
