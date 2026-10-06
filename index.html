@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#7fb2ea">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="雪坡大冒險：選一張地圖、從 11 位動物夥伴中選一位，一路滑到終點：閃障礙、跳、蹲、撿金幣的 8-bit 小遊戲。">
+<title>雪坡大冒險</title>
+<link rel="icon" href="assets/sprites/anje.png">
+<style>
+  @font-face { font-family: 'Cubic11'; src: url('assets/fonts/Cubic_11.woff2') format('woff2'); font-display: block; }
+  html, body { margin: 0; height: 100%; background: #7fb2ea; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  canvas { display: block; touch-action: none; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="game" width="1920" height="1080" style="position:relative;z-index:1"></canvas>
+<script src="js/core.js"></script>
+<script src="js/course.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/score.js"></script>
+<script src="js/bot.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/maps/snow.js"></script>
+<script src="js/maps/water.js"></script>
+<script src="js/maps/desert.js"></script>
+<script src="js/maps/jungle.js"></script>
+<script src="js/maps/night.js"></script>
+<script src="js/maps/factory.js"></script>
+<script src="js/maps/volcano.js"></script>
+<script src="js/maps/cyber.js"></script>
+<script src="js/maps/chart.js"></script>
+<script src="js/chars.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/site.js"></script>
+<script src="js/world.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/input.js"></script>
+<script src="js/cursor.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
