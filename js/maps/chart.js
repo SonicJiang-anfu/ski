@@ -95,7 +95,7 @@
     WIDTH: [[0, 7], [RIB[0] - 8, 7], [RIB[0] + 4, 4.2], [RIB[1] - 6, 4.2], [FORK[0] - 2, 8], [FORK[1] + 2, 8], [CRASH - 6, 5.5], [CRASH_END + 6, 6.5],
       [TURN2[1], 6.5], [TUBE[0] - 12, 10], [TUBE[1] + 14, 10], [WEB[1] + 30, 10], [RJ - 10, 8.5], [RLAND - 6, 8.5], [COPY[0], 6.5], [COPY[1], 6.5],
       [THIN[0] - 14, 4], [THIN[0], TH], [THIN[1], TH], [THIN[1] + 16, 6], [FINISH - 30, 8], [FINISH, 8]],
-    OPEN: [[RIB[0], RIB[1]], [THIN[0] - 20, THIN[1] + 6]],   // (no walls along the curve or the line: off the edge she falls)
+    OPEN: [[RIB[0], RIB[1]], [TURN[1] + 6, KICK2 - 8], [THIN[0] - 20, THIN[1] + 6]],   // (no walls along the curve, the strip of film ridden backwards (← → the wrong way round in the mirror: easy to go off it), or the line: off the edge she falls)
     TUBE: [[TUBE[0], TUBE[1], TR]],
     VERT: [[CRASH, CRASH_END]],
     BACK: [BACKZ],
@@ -466,7 +466,13 @@
         if (Math.floor(a / 8) !== Math.floor(b / 8 - 1e-6)) { const z = Math.floor(b / 8) * 8; D.poly3(cam, [S3(z - 0.12, -ha + 1.1, 0.01), S3(z - 0.12, ha - 1.1, 0.01), S3(z + 0.12, ha - 1.1, 0.01), S3(z + 0.12, -ha + 1.1, 0.01)], '#1a1008'); }
         for (let z = Math.ceil(a / 1.6) * 1.6; z < b - 0.5; z += 1.6) for (const sd of [-1, 1]) { const x = sd * (HW(z) - 0.55); D.poly3(cam, [S3(z, x - 0.25, 0.01), S3(z, x + 0.25, 0.01), S3(z + 0.8, x + 0.25, 0.01), S3(z + 0.8, x - 0.25, 0.01)], '#e8d0a0', 0.85); }
       }
+      const open = course.openAt((a + b) / 2);
       for (const sd of [-1, 1]) {
+        if (open) {                                                 // no walls: the edge of the film, its thickness hanging over the drop, a line of light along it
+          D.poly3(cam, [S3(a, sd * ha, 0), S3(b, sd * hb, 0), S3(b, sd * hb, -0.6), S3(a, sd * ha, -0.6)], c('#2a1c10'));
+          line3(D, R, a, sd * (ha - 0.06), b, sd * (hb - 0.06), 0.012, 0.12, '#ffbf5a', 0.95);
+          continue;
+        }
         D.poly3(cam, [S3(a, sd * ha, 0), S3(b, sd * hb, 0), S3(b, sd * hb, 0.9), S3(a, sd * ha, 0.9)], c('#3a2814'), 1, [-sd, 0, 0]);
         line3(D, R, a, sd * ha, b, sd * hb, 0.9, 0.18, '#ffbf5a', 0.95);
       }

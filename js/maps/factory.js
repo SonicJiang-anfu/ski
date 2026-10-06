@@ -93,7 +93,7 @@
     const spin = (z, x, amp, period) => P.roll('top', z, x, 0.55, amp, period, { h: 0.7 });  // a spinning top
     const blocks = (z, x, hw = 1.2) => P.tall('blocks', z, x, hw, { hd: 0.9 });              // a stack of alphabet blocks
     const duck = (z, x) => P.hop('duck', z, x, 0.6, { h: 0.7 });
-    const rc = (z, x) => P.car('rc', z, x, { k: -0.4, hw: 0.8, hd: 1.3, h: 0.75, honk: false, pass: 'zoom' });   // a wind-up race car, slower than her: hop it or pass it
+    const rc = (z, x, hw = 0.8) => P.car('rc', z, x, { k: -0.4, hw, hd: 1.3, h: 0.75, honk: false, pass: 'zoom' });   // a wind-up race car, slower than her: hop it or pass it
     const ribbon = z => P.over('ribbon', z, 0, 2 * c.halfAt(z));
     const jack = (z, x) => P.tall('jack', z, x, 0.8, { hd: 0.8 });                            // a jack-in-the-box (pops up as she comes)
     const sorter = z => P.tall('sorter', z, 0, 1.3, { hd: 0.8 });                             // the nose of the sorting machine
@@ -188,7 +188,7 @@
     tramp(v(152), 0, 2.5, 2, { ...SPRING, k: 'spring', sfx: 'boing', rise: 0.3 });
     for (let z = v(155); z < v(154) + B_SPRING.z - 4; z += 4) P.gap('chasm', z, Math.min(4, v(154) + B_SPRING.z - 4 - z), { hw: 2.5, nojump: true });
     for (let k = 1; k <= 5; k++) { const d = B_SPRING.z * k / 6; coin(v(154) + d, 0, B_SPRING.at(d) + 0.75); }
-    walker(200); walker(218, 0.3); coin(v(200), 0, 2.4); coin(v(218), 0, 2.4);
+    walker(200); walker(224, 0.3); coin(v(200), 0, 2.4); coin(v(224), 0, 2.4);
     crusher(240); crusher(254); coin(v(240), 0, 0.6); coin(v(254), 0, 0.6);
     pit2(286, 7); arcOver(286, 7, 3);
     P.cue(TV[1] + 0.5, 'tvout');
@@ -198,7 +198,7 @@
     row(T(1160), 0, 2); coin(T(1186), -2); coin(T(1212), 0); coin(T(1300), 0);
     P.tall('divider', FORK3[0], 0, 0.9, { hd: 0.8 });           // the track splits round a divider: left, boost pads end to end; right, cars to hop and a kicker
     boost(T(1232), -2.4, 1.1, 6); boost(T(1252), -2.4, 1.1, 6); boost(T(1272), -2.4, 1.1, 6); coin(T(1242), -2.4); coin(T(1262), -2.4); coin(T(1282), -2.4);
-    rc(T(1236), 2.4); rc(T(1258), 2.4); P.ramp(T(1274), 2.4, 1.1, 0.9, 5); P.flight(c.ramps[c.ramps.length - 1], 3, 4, 30); coin(T(1236), 2.4, 1.8);
+    rc(T(1236), 1.8, 0.6); rc(T(1258), 3.2, 0.6); P.ramp(T(1274), 2.4, 1.1, 0.9, 5); P.flight(c.ramps[c.ramps.length - 1], 3, 4, 30); coin(T(1236), 1.8, 1.8);   // (narrower than that side, one to its left, one to its right: weave past them, or hop them)
     P.launch(GAPZ - 4, 0, 4, 4, KICK.vy, KICK.v, KICK.rise, { k: 'kick', sfx: 'ramp', pop: 'leap' });
     for (let z = GAPZ + 0.5; z < GAPZ + B_KICK.z - 3.01; z += 4) P.gap('gap', z, Math.min(4, GAPZ + B_KICK.z - 3 - z), { nojump: true });   // (in short pieces: a hole is as high as the slope at its middle)
     for (let k = 1; k <= 4; k++) { const d = B_KICK.z * k / 5; coin(GAPZ + d, 0, B_KICK.at(d) + 0.75); }   // (at() is already above the falling track)
