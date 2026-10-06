@@ -54,7 +54,7 @@
 
   const course = root.SkiCourse.build({
     id: 'cyber', HALF: 10, FINISH, LENGTH: FINISH + 100, START: 4, flow: true, botLanes: 0.125,   // (fast: the bot edges across in finer steps)
-    phys: { VMAX: 33, DRAG: 0.22, DRIFT: 0.4, CENT: 0, WALL_DRAG: 1.7, REWIND_V: 0.85 },
+    phys: { VMAX: 33, DRAG: 0.22, DRIFT: 0.4, CENT: 0, WALL_DRAG: 1.7, REWIND_V: 0.85, EDGE: 0.3 },   // (EDGE: off a wall-less edge only once her skis are off it, as she is seen to be: 數讀房市's rule)
     CX: [[0, 0], [40, 0], [90, -5], [150, 4], [FORK[0], 0], [FORK[1], 0], [362, -4], [392, -11], [SKY0, -16], [452, -18], [490, -14], [520, -9],
       [560, -6], [TA[0], -6], [TB[1], -6], [W[3], -6], [TUBE[0], -4], [810, 2], [TUBE[1], 6], [FL[0], 6], [980, 2], [1060, -6], [1140, -2], [FL[2], 3], [FL[3], 3],
       [ODZ[0], 0], [1310, -7], [1370, 5], [ODZ[1], 0], [FORK2[0], 0], [FORK2[1], 0], [1612, -6], [BR[0], -8], [1700, -4], [1760, 0], [JUMP, 0], [FINISH + 100, 0]],

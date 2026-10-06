@@ -72,7 +72,7 @@
 
   const course = root.SkiCourse.build({
     id: 'volcano', HALF: 10, FINISH, LENGTH: FINISH + 100, START: 4,
-    phys: { VMAX: 34, DRAG: 0.22, DRIFT: 0.4, CENT: 0, WALL_DRAG: 1.7, REWIND_V: 0.9 },   // (back after a fall nearly at speed: islands and gaps need it)
+    phys: { VMAX: 34, DRAG: 0.22, DRIFT: 0.4, CENT: 0, WALL_DRAG: 1.7, REWIND_V: 0.9, EDGE: 0.3 },   // (back after a fall nearly at speed: islands and gaps need it) (EDGE: off a wall-less edge only once her skis are off it, as she is seen to be: 數讀房市's rule)
     CX: [[0, 0], [40, 0], [FA[0], 0], [FA[1], 0], [200, 0], [250, -6], [300, -8], [330, -4], [356, 4], [384, -3], [410, 3], [432, 0],
       [FORK[0], 0], [FORK[1], 0], [700, 5], [760, -4], [806, 0], [840, 0], [900, -4], [960, 3], [1020, -3], [1080, 4], [1130, 0], [CJ, 0],
       ...ISL.list.slice(0, -1).map(([a, b], i) => [(a + b) / 2, i % 2 ? (i % 4 === 1 ? -2.5 : 2.5) : 0]), [ISL.end, 0],

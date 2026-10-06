@@ -146,14 +146,15 @@
     let held = false, off = false;
     // no wall here: past the edge there is nothing under her (but just after a crash the edge holds her like a wall,
     // so she is never put back only to slide straight off again)
-    if (c.openAt && (c.openAt(s.z) || (s.out && s.air)) && !(s.inv > 0)) off = Math.abs(s.x) > half + K.EDGE;   // (flown out past the edge just before a wall begins: still out there, falling)
+    const openHere = !!(c.openAt && c.openAt(s.z));
+    if (c.openAt && (openHere || (s.out && s.air)) && !(s.inv > 0)) off = Math.abs(s.x) > half + (openHere ? K.EDGE : 0);   // (flown out past the edge just before a wall begins: still out there, falling)
     else if (!inTube && Math.abs(s.x) > lim) {
       const sd = Math.sign(s.x), open = c.openAt && c.openAt(s.z);   // (open: the edge only holding her just after a crash, with no wall to rub on)
       s.x = sd * lim; held = true;
       if (sd * s.vx > 0) s.vx = -0.2 * s.vx;
       if (!s.air && !open) { s.wall = true; s.v -= s.v * K.WALL_DRAG * dt; }
     }
-    s.out = off;
+    s.out = off || (openHere && s.air && Math.abs(s.x) > half);   // (in the air past the edge as drawn: flown on over where a wall begins, there is nothing under her)
     const med = c.medianAt ? c.medianAt(s.z) : 0;               // a fork: the median between its two sides is a wall
     if (med > 0 && Math.abs(s.x) < med + K.PR) {
       const sd = Math.sign(xPrev) || Math.sign(s.x) || 1;

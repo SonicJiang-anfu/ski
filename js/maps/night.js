@@ -31,7 +31,7 @@
   const PG = 0.08;                                              // the jet is coming in to land: its back falls gently to the nose
   const course = root.SkiCourse.build({
     id: 'night', HALF: 11, FINISH, LENGTH: 2090, START: 4,
-    phys: { VMAX: 35, DRAG: 0.2, DRIFT: 0.35, CENT: 0.6, WALL_DRAG: 1.8 },
+    phys: { VMAX: 35, DRAG: 0.2, DRIFT: 0.35, CENT: 0.6, WALL_DRAG: 1.8, EDGE: 0.3 },   // (EDGE: off a wall-less edge only once her skis are off it, as she is seen to be: 數讀房市's rule)
     flow: true, botLanes: 0.125,                                 // (fast enough on the boost pads that the bot steers in finer steps)
     CX: [[0, 0], [40, 0], [90, -5], [140, 0], [150, 0], [270, 0], [305, 6], [345, -6], [385, 0], [420, 9], [455, 10], [495, 4],
       [550, -6], [600, 0], [722, 0], [765, 9], [810, 0], [832, 0], [1000, 0], [1040, -8], [1085, 0], [1110, 0],
@@ -819,6 +819,16 @@
   let VIG = null;
   const BANNERS = ['歡迎光臨', '深夜食堂', '24小時營業', '前方夜市', '小心駕駛'];
 
+  // the building site's trench, drawn on the road a slice at a time (only the part in this slice: the slices nearer are
+  // drawn after, and would cover a hole drawn whole): black, yellow and black stripes before and after it
+  const TRENCH = course.obstacles.filter(o => o.k === 'trench');
+  function trenchTop(D, R, o, za, zb) {
+    const { cam, S3 } = R, z0 = o.z - o.hd, z1 = o.z + o.hd, x0 = o.x - o.hw, x1 = o.x + o.hw, a = Math.max(za, z0), b = Math.min(zb, z1);
+    if (b > a) D.poly3(cam, [S3(a, x0, 0.006), S3(a, x1, 0.006), S3(b, x1, 0.006), S3(b, x0, 0.006)], '#07080c');
+    if (b > a) for (const [u0, u1] of [[x0 - 0.2, x0], [x1, x1 + 0.2]]) D.poly3(cam, [S3(a, u0, 0.008), S3(a, u1, 0.008), S3(b, u1, 0.008), S3(b, u0, 0.008)], '#ffcf3a');   // (lit edges: black on the night road is hard to see)
+    for (const zz of [z0, z1]) if (zz >= za && zz < zb) D.poly3(cam, [S3(zz - 0.2, x0 - 0.2, 0.008), S3(zz - 0.2, x1 + 0.2, 0.008), S3(zz, x1 + 0.2, 0.008), S3(zz, x0 - 0.2, 0.008)], '#ffcf3a');
+    for (const zz of [z0 - 0.3, z1 + 0.3]) if (zz >= za && zz < zb) stripes(D, R, zz, x0, x1, 0.02, 0.06, '#ffcf3a', '#1a1d26', 8);
+  }
   const theme = {
     spray: ['#ffd27a', '#ff9a3a', '#ffffff'], trail: '#9aa0ad', ski: ['#ff4fa8', '#ff9ad0', '#c8207a'],
     boost: { pad: '#3ff2ff', glow: '#b46cff', arrow: '#ffffff' },
@@ -857,6 +867,7 @@
         else if (zn === 'roof') roofSlice(D, R, a, b, near);
       }
       if (za <= LIP && zb > LIP) viaEnd(D, R);
+      for (const o of TRENCH) trenchTop(D, R, o, za, zb);
     },
     // the launch ramp at the end of the viaduct: a steel ski jump striped yellow and black (the jet's nose draws itself)
     ramp(R, r) {
@@ -969,11 +980,9 @@
           for (const x of [x0 + 1.5, x1 - 1.5]) crouchMarks(D, R, o, x);
           break;
         }
-        case 'trench': {                                                // a hole dug across the building-site lane
-          const z0 = o.z - o.hd, z1 = o.z + o.hd, x0 = o.x - o.hw, x1 = o.x + o.hw;
-          D.poly3(cam, [S3(z0, x0, 0.006), S3(z0, x1, 0.006), S3(z1, x1, 0.006), S3(z1, x0, 0.006)], '#07080c');
+        case 'trench': {                                                // a hole dug across the building-site lane: its far side (the hole itself and its
+          const z1 = o.z + o.hd, x0 = o.x - o.hw, x1 = o.x + o.hw;      // stripes are drawn with the road, trenchTop: as one item here the road covered most of it)
           D.poly3(cam, [S3(z1, x0, 0.006), S3(z1, x1, 0.006), S3(z1, x1, -1.6), S3(z1, x0, -1.6)], '#4a3a2a', 1, [0, 0, -1]);
-          for (const zz of [z0 - 0.3, z1 + 0.3]) stripes(D, R, zz, x0, x1, 0.02, 0.06, '#ffcf3a', '#1a1d26', 8);
           break;
         }
         case 'fin': fin(D, shifted(R, jetShift(R.sz))); break;

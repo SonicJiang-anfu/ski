@@ -42,7 +42,7 @@
   const fall = ([z, d], before, after) => [[z, before], [z + 0.4, STEEP], [z + 0.4 + d / STEEP, STEEP], [z + 0.8 + d / STEEP, after]];
   const course = root.SkiCourse.build({
     id: 'jungle', HALF: 7, FINISH, LENGTH: 2042, START: 4,
-    phys: { VMAX: 34, DRAG: 0.24, DRIFT: 0.35, CENT: 0.8, WALL_DRAG: 1.8 },   // faster than the easy maps; the rock banks bite harder
+    phys: { VMAX: 34, DRAG: 0.24, DRIFT: 0.35, CENT: 0.8, WALL_DRAG: 1.8, EDGE: 0.65 },   // faster than the easy maps; the rock banks bite harder (EDGE: off the aqueduct once her skis are off its stone lip, LIP 0.35 + 0.3)
     flow: true,
     CX: [[0, 0], [50, 0], [100, -6], [150, 5], [200, -5], [250, 7], [300, 0],
       [340, 0], [380, -12], [425, -20], [470, -12], [510, 0], [550, 12], [595, 20], [635, 12], [665, 0],   // ② two long sustained bends
@@ -61,7 +61,7 @@
     VERT: [[SHEER[0], SHEER_END]],
     slow: [[FALLS[3][0] - 2, FALLS[3][0] + 60], [VS + 4, LANDV - 4]],   // the giant waterfall and the vine swing, in slow motion
     SPLIT: [{ m: [[ISLE[0] - 1, 0], [ISLE[0] + 12, 1.6], [ISLE[1] - 12, 1.6], [ISLE[1], 0]] }, { m: [[TFORK[0] - 1, 0], [TFORK[0] + 8, 1.2], [TFORK[1] - 8, 1.2], [TFORK[1], 0]] }],
-    CAMYAW: [[CHASE[0] + 4, 0], [CHASE[0] + 12, 2.8], [CHASE[1] - 26, 2.8], [CHASE[1] - 16, 0]],   // the camera turns round to show the boulder coming (and back well before the pillar at the fork: facing it only 8 ahead, it came too fast to miss)
+    CAMYAW: [[CHASE[0] + 4, 0], [CHASE[0] + 12, 2.8], [CHASE[1] - 26, 2.8], [CHASE[1] - 16, 0]],   // the camera turns round to show the boulder coming (and back well before the fork and what is in its two ways)
     sections: [{ name: '雨林急流', z0: 0 }, { name: '鱷魚河灣', z0: 330 }, { name: '三疊瀑布', z0: 665 }, { name: '天空雙瀑', z0: 960 }, { name: '神殿逃亡', z0: 1480 }],
   }, (c, P) => {
     const FULL = P.FULL;
@@ -118,7 +118,7 @@
     flow([[1430, 0], [1460, 0]], 1.8); arc(FALLS[3][0], 0, 10, 4);
     // the lagoon, then into the stone face's mouth: the temple. Crushers slamming down in turn; the wall behind bursts
     // and a boulder comes rolling after her (a clear run, boost pads, the camera turned round to see it); a fork round
-    // a row of pillars (darts across the left, the floor falling in on the right); out on to the cliff, the vine swing
+    // a wall (darts across the left, the floor falling in on the right); out on to the cliff, the vine swing
     coin(1528, 0); coin(1540, 0);                                 // (nothing to hop here: a hop still in the giant waterfall's slow motion would slow it again)
     P.cue(TEMPLE[0] - 2, 'temple');
     const crush = (z, x, hw, ph) => P.stamp('crusher', z, x, hw, 2.6, { ph, top: 3.6, hd: 1.0 });
@@ -127,13 +127,15 @@
     crush(1596, -3.6, 1.4, 2.4); crush(1596, 3.6, 1.4, 2.4 + Math.PI); coin(1596, 0);
     P.cue(CHASE[0], 'rumble');
     boost(CHASE[0] + 6, 0, 1.6, 6); boost(CHASE[0] + 22, 0, 1.6, 6); boost(CHASE[0] + 38, 0, 1.6, 6); coin(CHASE[0] + 30, 0);
-    P.tall('pillar', TFORK[0], 0, 1.3, { hd: 1.0 });
+    // (the fork starts in the prow of the wall between its two ways (SPLIT): run into it and it turns her aside along it,
+    // as a wall does. A pillar there to crash on came straight after the camera turned back from the boulder: too soon)
     const darts = z => P.over('darts', z, -4.1, 5.8, { y0: 1.3, y1: 2.4 });   // darts shooting across the left way: duck
     P.roll('spikes', 1664, -4.1, 0.8, 1.6, 2.2, { h: 0.7 }); coin(1664, -4.1, 1.8); darts(1690); coin(1690, -4.1, 0.6);   // (a hop over the spikes is down well before the darts)
     const pit = z => P.gap('pit', z, 3.5, { x: 4.1, hw: 2.9 });                 // the floor falls in on the right way: jump
     pit(1668); coin(1669.75, 4.1, 1.9); pit(1690); coin(1691.75, 4.1, 1.9);
     P.launch(VS, 0, 7, 4, VINE.vy, VINE.v, VINE.rise, { k: 'vine', sfx: 'vine', pop: 'vine' });
-    for (let z = VS + 4.5; z < LANDV - 4 - 0.01; z += 4) P.gap('ravine', z, Math.min(4, LANDV - 4 - z), { thrown: true });
+    // (under the swing is the river, all the way: nothing to drop into, wherever she comes down. A row of unseen gaps here
+    // caught anyone thrown off a little early, by a jump at the cliff's edge)
     for (let k = 1; k <= 5; k++) { const d = B_VINE.z * k / 6; coin(VS + 4 + d, 0, B_VINE.at(d) + 0.75); }
     flow([[1800, 0], [1832, 3], [1857, 0]], 1.5); croc(1818, -2.5, 3); branch(1840); rock(1862, -2); swim(1882, 0, 4.3, 3.6); log(1900, -3.5, 3.4); rock(1922, -3);
     row(1264, 0, 3); coin(1332, 0, 0.6); coin(1348, 0, 1.9); row(1356, 2, 3); coin(1388, 0, 0.6); row(1432, 0, 3);
@@ -679,7 +681,7 @@
     }
   }
   // ---- the temple: a channel of water through stone, carved walls, a low stone ceiling, torches; the floor falling
-  // into pits on one way of its fork, a wall of pillars between the two ways
+  // into pits on one way of its fork, a wall between the two ways, a prow where it starts
   const TCEIL = 8.6, inTemple = z => z >= TEMPLE[0] && z < TEMPLE[1];
   const PITS = course.obstacles.filter(o => o.k === 'pit');
   function templeSlice(D, R, za, zb, near) {
@@ -711,7 +713,10 @@
         D.poly3(cam, [[X - 0.3, y, z - 0.01], [X + 0.3, y, z - 0.01], [X, y + 1.0 * fl, z - 0.01]], '#ff8a1e');
         D.poly3(cam, [[X - 0.14, y + 0.02, z - 0.02], [X + 0.14, y + 0.02, z - 0.02], [X, y + 0.55 * fl, z - 0.02]], '#fff1a8'); }
     }
-    if (ma > 0.05 || mb > 0.05) for (const sd of [-1, 1]) D.poly3(cam, [P3(za, sd * ma, 0), P3(zb, sd * mb, 0), P3(zb, sd * mb, TCEIL), P3(za, sd * ma, TCEIL)], k ? '#8a8472' : '#827c6a', 1, [sd, 0, 0]);   // the wall between the two ways
+    if (ma > 0.05 || mb > 0.05) for (const sd of [-1, 1]) {        // the wall between the two ways: a prow where it starts, gilded bands along it to see it by
+      D.poly3(cam, [P3(za, sd * ma, 0), P3(zb, sd * mb, 0), P3(zb, sd * mb, TCEIL), P3(za, sd * ma, TCEIL)], k ? '#8a8472' : '#827c6a', 1, [sd, 0, 0]);
+      if (za < TFORK[0] + 12) for (const h of [1.5, 4.0, 6.5]) D.poly3(cam, [P3(za, sd * (ma + 0.01), h), P3(zb, sd * (mb + 0.01), h), P3(zb, sd * (mb + 0.01), h + 0.5), P3(za, sd * (ma + 0.01), h + 0.5)], '#c8a830', 0.9, [sd, 0, 0]);
+    }
     for (const e of [TEMPLE[1]]) if (e >= za && e < zb && R.zc < e) {   // the far doorway, daylight beyond it
       for (const sd of [-1, 1]) D.poly3(cam, [P3(e, sd * W, -1), P3(e, sd * (W + 40), -1), P3(e, sd * (W + 40), 30), P3(e, sd * W, 30)], '#6a6556', 1, [0, 0, -1]);
       D.poly3(cam, [P3(e, -W, TCEIL), P3(e, W, TCEIL), P3(e, W, 30), P3(e, -W, 30)], '#6a6556', 1, [0, 0, -1]);
@@ -788,12 +793,6 @@
     D.poly3(cam, [P3(z0 - 0.01, x0 + 0.2, B + 0.3), P3(z0 - 0.01, x1 - 0.2, B + 0.3), P3(z0 - 0.01, x1 - 0.2, B + 0.6), P3(z0 - 0.01, x0 + 0.2, B + 0.6)], '#c8a830', 0.9);   // its teeth, gilded
     for (const sd of [-1, 1]) D.poly3(cam, [P3(z0 - 0.02, o.x + sd * o.hw * 0.4 - 0.3, B + 1.6), P3(z0 - 0.02, o.x + sd * o.hw * 0.4 + 0.3, B + 1.6), P3(z0 - 0.02, o.x + sd * o.hw * 0.4 + 0.3, B + 2.0), P3(z0 - 0.02, o.x + sd * o.hw * 0.4 - 0.3, B + 2.0)], warn ? '#ff3a2a' : '#2a2720');
     if (T < TCEIL) for (const sd of [-0.5, 0.5]) D.poly3(cam, [P3(o.z, o.x + sd * o.hw - 0.08, T), P3(o.z, o.x + sd * o.hw + 0.08, T), P3(o.z, o.x + sd * o.hw + 0.08, TCEIL), P3(o.z, o.x + sd * o.hw - 0.08, TCEIL)], '#3a3630');   // chains
-  }
-  function pillarObs(D, R, o) {                                     // a carved pillar: the end of the wall between the temple's two ways
-    const { cam, P3 } = R, X = R.wx(o.z, o.x), y = gy(o.z), w = o.hw;
-    D.box3(cam, X - w, X + w, y, y + TCEIL, o.z - o.hd, o.z + o.hd, { side: '#8a8472', rear: '#9a947f', top: '#9a947f' });
-    for (const h of [1.5, 4.0, 6.5]) D.poly3(cam, [[X - w, y + h, o.z - o.hd - 0.02], [X + w, y + h, o.z - o.hd - 0.02], [X + w, y + h + 0.5, o.z - o.hd - 0.02], [X - w, y + h + 0.5, o.z - o.hd - 0.02]], '#c8a830', 0.85);
-    void P3;
   }
   function dartsObs(D, R, o) {                                      // darts flying across from holes in the wall, head high: duck
     const { cam, P3, t } = R, x0 = o.x - o.hw, x1 = o.x + o.hw, y = o.y0 + 0.4;
@@ -945,7 +944,6 @@
       else if (o.k === 'root') rootObs(D, R, o);
       else if (o.k === 'shroom') { foamRing(D, R, o.z, o.x, 1.1); R.billboard(PIXJ.shroom, o.z, o.x, -0.05); }
       else if (o.k === 'crusher') crusherObs(D, R, o);
-      else if (o.k === 'pillar') pillarObs(D, R, o);
       else if (o.k === 'darts') dartsObs(D, R, o);
       else if (o.k === 'spikes') spikesObs(D, R, o);
       else if (o.k === 'log') logObs(D, R, o);
