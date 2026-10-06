@@ -217,7 +217,7 @@
     const put = {
       FULL: HALF * 2,
       hop: (k, z, x, hw, o = {}) => c.obstacles.push({ k, z, x, hw, hd: o.hd ?? 0.6, h: o.h ?? 0.8 }),
-      tall: (k, z, x, hw, o = {}) => c.obstacles.push({ k, z, x, hw, hd: o.hd ?? 0.6, h: 99 }),
+      tall: (k, z, x, hw, o = {}) => c.obstacles.push({ k, z, x, hw, hd: o.hd ?? 0.6, h: 99, look: o.look }),   // (look: how high it is drawn, when far less than a wall: for tools/camclip.js)
       over: (k, z, x, w, o = {}) => c.obstacles.push({ k, z, x, hw: w / 2, hd: o.hd ?? 0.3, y0: o.y0 ?? 1.3, y1: o.y1 ?? 2.4 }),
       ramp: (z, x, hw, rise, len = 8) => c.ramps.push({ z, len, x, hw, rise }),
       boost: (z, x, hw = 1.5, len = 5) => c.boosts.push({ z, len, x, hw }),

@@ -11,7 +11,7 @@
 // through a giant hollow log (right). Mossy boulders to go round, floating logs to hop, low branches, vines and
 // stalactites to crouch under.
 (function (root) {
-  const { clamp, lerp, seg, rng, mixHex, obX, obUp, stampY } = root.SkiCore;
+  const { clamp, lerp, seg, smooth, rng, mixHex, obX, obUp, stampY } = root.SkiCore;
 
   // ------------------------------------------------------------ course
   const FINISH = 1942;
@@ -61,11 +61,11 @@
     VERT: [[SHEER[0], SHEER_END]],
     slow: [[FALLS[3][0] - 2, FALLS[3][0] + 60], [VS + 4, LANDV - 4]],   // the giant waterfall and the vine swing, in slow motion
     SPLIT: [{ m: [[ISLE[0] - 1, 0], [ISLE[0] + 12, 1.6], [ISLE[1] - 12, 1.6], [ISLE[1], 0]] }, { m: [[TFORK[0] - 1, 0], [TFORK[0] + 8, 1.2], [TFORK[1] - 8, 1.2], [TFORK[1], 0]] }],
-    CAMYAW: [[CHASE[0] + 4, 0], [CHASE[0] + 14, 2.8], [CHASE[1] - 14, 2.8], [CHASE[1] - 2, 0]],   // the camera turns round to show the boulder coming
+    CAMYAW: [[CHASE[0] + 4, 0], [CHASE[0] + 12, 2.8], [CHASE[1] - 26, 2.8], [CHASE[1] - 16, 0]],   // the camera turns round to show the boulder coming (and back well before the pillar at the fork: facing it only 8 ahead, it came too fast to miss)
     sections: [{ name: '雨林急流', z0: 0 }, { name: '鱷魚河灣', z0: 330 }, { name: '三疊瀑布', z0: 665 }, { name: '天空雙瀑', z0: 960 }, { name: '神殿逃亡', z0: 1480 }],
   }, (c, P) => {
     const FULL = P.FULL;
-    const rock = (z, x, hw = 0.9) => P.tall('rock', z, x, hw);              // mossy boulder: go round
+    const rock = (z, x, hw = 0.9) => P.tall('rock', z, x, hw, { look: 1.5 });   // mossy boulder: go round (as high as its picture)
     const log = (z, x, hw) => P.hop('log', z, x, hw, { hd: 0.45, h: 0.7 });  // floating log: hop it
     const branch = z => P.over('branch', z, 0, FULL);                        // low branch right across: crouch
     const croc = (z, x, period = 3.2) => P.dive('croc', z, x, 1.2, period, { h: 0.7 });          // lies across the current, sinks, comes back up
@@ -214,7 +214,7 @@
     const tops = [];                                               // treetops round the pool under the sheer fall (seen from above)
     for (let z = SHEER_END - 10; z < SHEER_END + 90; z += 3) for (const sd of [-1, 1]) for (let j = 0; j < 2; j++) {
       const x = sd * (HW(z) + 3 + j * 9 + r() * 8);
-      tops.push({ z: z + r() * 3, x, rad: 2.5 + r() * 2.5, up: 6 + r() * 5, c: (r() * 3) | 0 });
+      tops.push({ z: z + r() * 3, x, rad: 2.5 + r() * 2.5, up: 2 + r() * 1, c: (r() * 3) | 0 });   // (low and level: higher, they stacked up into towers rushing at her, and the camera coming down met them as slabs)
     }
     const byZ = a => a.sort((p, q) => p.z - q.z);
     return { tops: byZ(tops), trees: byZ(trees), palms: byZ(palms), bananas: byZ(bananas), bamboo: byZ(bamboo), ferns: byZ(ferns), flowers: byZ(flowers), boulders: byZ(boulders), heads, ruins, huts, torches: byZ(torches), canoes };
@@ -864,15 +864,17 @@
     // trees, palms, banana plants, bamboo, ferns, flowers, boulders, stone heads, ruins; huts and torches by the
     // lagoon; the cliff with the cave; mist where the falls come down
     scenery(R) {
-      const D = root.SkiDraw, { cam, add, lo, hi, zc, wx, t } = R;
+      const D = root.SkiDraw, { cam, lo, hi, zc, wx, t } = R;
+      // looking down the sheer fall only treetops are seen (a tree stood up on the ground is a long streak from above);
+      // as the camera tilts back up at its foot they fade into the trees, not swapped in a frame (trees sprang up)
+      const topK = smooth(seg(R.cam.pitch, 0.8, 1.1)), faded = (k, fn) => () => { const g = D.ctx, a = g.globalAlpha; g.globalAlpha = a * k; try { fn(); } finally { g.globalAlpha = a; } };
+      if (topK > 0) for (const tp of SCENE.tops) if (tp.z > lo && tp.z < hi) R.add(tp.z, topK < 1 ? faded(topK, () => treetop(D, R, tp)) : () => treetop(D, R, tp));
+      if (topK >= 1) return;
+      const add = topK > 0 ? (z, fn, ...more) => R.add(z, faded(1 - topK, fn), ...more) : R.add;
       // the other mascots cheering on bamboo decks either side of the finish
       if (R.zc > FINISH - 160) root.SkiWorld.crowd(R, { z0: FINISH - 50, z1: FINISH + 25, stand: { top: '#c8a060', top2: '#b08850', face: '#7a5a30' } });
       const inside = inCave(zc), hidden = z => (inside && z < CAVE[1] + 2) || (!inside && zc < CAVE[0] && z > CAVE[0] && z < CAVE[1] + 3) || (inTemple(zc) && z < TEMPLE[1]) || (zc < TEMPLE[0] && z > TEMPLE[0] && z < TEMPLE[1] + 3);
       const ok = (z, d = 110) => z > lo && z < hi && Math.abs(z - zc) < d && !hidden(z);
-      if (R.cam.pitch > 0.9) {                                     // looking straight down: only what is seen from above
-        for (const tp of SCENE.tops) if (tp.z > lo && tp.z < hi) add(tp.z, () => treetop(D, R, tp));
-        return;
-      }
       if (zc < CAVE[0] && CAVE[0] < hi) add(CAVE[0] - 0.05, () => cliff(D, R));
       if (zc < TEMPLE[0] && TEMPLE[0] < hi) add(TEMPLE[0] - 0.05, () => templeFace(D, R));
       if (R.sz >= CHASE[0] && R.sz < TEMPLE[1]) add(R.sz - bGap(R.sz), () => boulderChase(D, R));

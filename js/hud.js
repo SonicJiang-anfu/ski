@@ -371,12 +371,14 @@
       if (sel) {
         D.panel(c.x - 6, c.y - 6, c.w + 12, c.h + 12, { fill: D.C.orange, border: D.C.orange, b: 6, drop: false });
         D.panel(c.x, c.y, c.w, c.h, { fill: '#fff6ee', border: '#fff6ee', drop: false });
-        D.panel(c.x - 6, c.y - 6, 66, 40, { fill: D.C.orange, border: D.C.orange, drop: false });   // corner tag inside the card
-        D.txt('1P', c.x + 27, c.y + 25, { size: 26, color: '#ffffff', align: 'center' });
+        const tw = D.small ? 82 : 66, th = D.small ? 48 : 40;     // (a phone's bigger type: a bigger tag)
+        D.panel(c.x - 6, c.y - 6, tw, th, { fill: D.C.orange, border: D.C.orange, drop: false });   // corner tag inside the card
+        D.txt('1P', c.x - 6 + tw / 2, c.y - 6 + th - 9, { size: 26, color: '#ffffff', align: 'center' });
       } else D.panel(c.x, c.y, c.w, c.h, { fill: 'rgba(238,241,248,0.95)', border: 'rgba(213,219,232,0.9)', drop: false });
       glow(c.x, c.y, c.w, c.h, 6, k);
-      const s = Math.max(2, Math.floor(Math.min(c.w * 0.82 / 40, (c.h - 56) / 48)));
-      D.spr(list[c.i].id + (blinkAt(o.t, c.i) ? '_blink' : ''), c.x + c.w / 2, c.y + c.h - 48, s, { alpha: sel || k > 0 ? 1 : 0.6 });
+      const nb = D.small ? 56 : 48;                                // (room under her for the name, bigger on a phone)
+      const s = Math.max(2, Math.floor(Math.min(c.w * 0.82 / 40, (c.h - nb - 8) / 48)));
+      D.spr(list[c.i].id + (blinkAt(o.t, c.i) ? '_blink' : ''), c.x + c.w / 2, c.y + c.h - nb, s, { alpha: sel || k > 0 ? 1 : 0.6 });
       D.txt(list[c.i].name, c.x + c.w / 2, c.y + c.h - 14, { size: 26, color: sel ? D.C.orange : D.C.muted, align: 'center' });
       g.restore();
     });

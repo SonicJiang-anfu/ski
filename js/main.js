@@ -22,6 +22,7 @@
     if (D.P) { D.W = 1080; D.H = Math.round(clamp(1080 * vh / vw, 1620, 2400)); }
     else { D.H = 1080; D.W = Math.round(clamp(1080 * vw / vh, 1440, 2400)); }
     const s = Math.min(vw / D.W, vh / D.H);
+    D.small = s < 0.5;                                           // (a phone: its small type made bigger, js/draw.js)
     canvas.style.width = Math.floor(D.W * s) + 'px'; canvas.style.height = Math.floor(D.H * s) + 'px';
     bs = Math.min(1, s * Math.min(window.devicePixelRatio || 1, 2)) * quality;
     canvas.width = Math.round(D.W * bs); canvas.height = Math.round(D.H * bs);

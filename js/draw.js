@@ -14,8 +14,11 @@
     const g = D.ctx; if (a !== 1) { const ga = g.globalAlpha; g.globalAlpha = ga * a; g.fillStyle = c; g.fillRect(x, y, w, h); g.globalAlpha = ga; return; }
     g.fillStyle = c; g.fillRect(x, y, w, h);
   };
+  // on a small screen (a phone: under half a pixel to a unit of the stage) no type smaller than MIN_TXT, about 12 px there
+  D.small = false; D.MIN_TXT = 34;
   D.txt = (s, x, y, o = {}) => {
-    const { size = 48, color = C.fg, align = 'left', base = 'alphabetic', shadow = null, alpha = 1, ls = 0, stroke = null } = o;
+    const { size: size0 = 48, color = C.fg, align = 'left', base = 'alphabetic', shadow = null, alpha = 1, ls = 0, stroke = null } = o;
+    const size = D.small ? Math.max(size0, D.MIN_TXT) : size0;
     const g = D.ctx; g.save(); g.globalAlpha *= alpha;
     g.font = `${size}px ${PX}`; g.textAlign = align; g.textBaseline = base;
     if ('letterSpacing' in g) g.letterSpacing = ls + 'px';
@@ -25,7 +28,7 @@
     g.restore();
   };
   D.measure = (s, size, ls = 0) => {
-    const g = D.ctx; g.save(); g.font = `${size}px ${PX}`; if ('letterSpacing' in g) g.letterSpacing = ls + 'px';
+    const g = D.ctx; g.save(); g.font = `${D.small ? Math.max(size, D.MIN_TXT) : size}px ${PX}`; if ('letterSpacing' in g) g.letterSpacing = ls + 'px';   // (as D.txt draws it)
     const w = g.measureText(s).width; g.restore(); return w;
   };
   D.panel = (x, y, w, h, o = {}) => {                            // pixel panel with notched corners + soft drop shadow

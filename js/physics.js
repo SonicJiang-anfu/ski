@@ -34,7 +34,7 @@
     const z = course.START, y = course.ground(z, 0);
     return {
       course, K: params(course), mode: 'ride', t: 0, z, x: 0, y, v: 0, vx: 0, vy: 0, air: false, airT: 0, duck: false, wall: false,
-      inv: 0, boostT: 0, onBoost: false, inSand: false, flowT: 0, inFlow: false, inVert: false, crashT: 0, crashes: 0, crashK: null, coins: 0, got: new Set(), jumpBuf: 0, finishTime: null,
+      inv: 0, again: 0, crashZ: -1e9, passZ: -1e9, boostT: 0, onBoost: false, inSand: false, flowT: 0, inFlow: false, inVert: false, crashT: 0, crashes: 0, crashK: null, coins: 0, got: new Set(), jumpBuf: 0, finishTime: null,
       hist: [{ t: 0, z, x: 0, v: 0 }], histT: 0, section: 0, gateIdx: 0, squash: new Set(), inSide: false, coyote: 0, rail: null, railT: 0, prevL: false, prevR: false,
     };
   }
@@ -55,6 +55,9 @@
     if (med > 0 && Math.abs(s.x) < med + K.PR + 0.2) s.x = (Math.sign(s.x) || 1) * (med + K.PR + 0.2);   // (where a fork's median has grown since: beside it)
     s.v = back(h); s.vx = 0; s.vy = 0;   // (inside a video game: straight back at her own pace)
     s.y = c.ground(s.z, s.x); s.air = false; s.duck = false; s.jumpBuf = 0;
+    // a second crash at one spot: this time she cannot crash until she is past it. Put back at the same moment, at the
+    // same speed, she met a crocodile coming up again and again (anything that moves in time can line up like that)
+    s.passZ = s.again >= 2 ? s.crashZ + 3 : -1e9;
     s.inv = K.INV_T; s.mode = 'ride'; s.boostT = 0; s.flowT = 0; s.rail = null; s.jet = false; s.caught = null;   // (back on rails: on the nearest one)
     if (s.squash) for (const o of [...s.squash]) if (o.z > s.z - 2) s.squash.delete(o);   // (back before a walker she squashed, or something she smashed: it is there again)
   }
@@ -73,8 +76,11 @@
     return over ? top > (o.stamp ? stampY(o, s.t, s.z) : o.y0) && above < o.y1 : above < o.h;
   }
 
+  function noteCrash(s) { s.again = Math.abs(s.z - s.crashZ) < 6 ? s.again + 1 : 1; s.crashZ = s.z; }   // (how many times running at this spot)
+
   // over the edge of a wall-less stretch, or into a hole: she drops away, then comes back as after a crash
   function fall(s, k, ev) {
+    noteCrash(s);
     s.mode = 'crash'; s.crashT = s.K.FALL_T; s.crashes++; s.crashK = k; s.air = true; s.vy = Math.min(s.vy, 0);
     s.vx = k === 'edge' ? Math.sign(s.x) * 3 : 0; s.v *= 0.5; s.duck = false; s.wall = false;
     ev.push({ type: 'crash', z: s.z, x: s.x, k, fall: true });
@@ -86,6 +92,7 @@
     const GR = K.GRAV * (c.gravAt ? c.gravAt(s.z) : 1);         // (weaker where the course says so: c.gravAt)
     if (s.mode !== 'done') s.t += dt;
     if (s.inv > 0) s.inv = Math.max(0, s.inv - dt);
+    if (s.mode === 'ride' && s.z < s.passZ) s.inv = Math.max(s.inv, 0.05);   // (until past where she crashed twice: see rewind)
 
     if (s.mode === 'crash') {                                  // tumbling: slide to a stop, then back in time
       s.v *= Math.exp(-4 * dt); s.z += s.v * dt;
@@ -141,10 +148,10 @@
     // so she is never put back only to slide straight off again)
     if (c.openAt && (c.openAt(s.z) || (s.out && s.air)) && !(s.inv > 0)) off = Math.abs(s.x) > half + K.EDGE;   // (flown out past the edge just before a wall begins: still out there, falling)
     else if (!inTube && Math.abs(s.x) > lim) {
-      const sd = Math.sign(s.x);
+      const sd = Math.sign(s.x), open = c.openAt && c.openAt(s.z);   // (open: the edge only holding her just after a crash, with no wall to rub on)
       s.x = sd * lim; held = true;
       if (sd * s.vx > 0) s.vx = -0.2 * s.vx;
-      if (!s.air) { s.wall = true; s.v -= s.v * K.WALL_DRAG * dt; }
+      if (!s.air && !open) { s.wall = true; s.v -= s.v * K.WALL_DRAG * dt; }
     }
     s.out = off;
     const med = c.medianAt ? c.medianAt(s.z) : 0;               // a fork: the median between its two sides is a wall
@@ -253,7 +260,7 @@
         }
         if (hits(s, o)) {
           if (od) { s.squash.add(o); ev.push({ type: 'smash', z: o.z, x: obX(o, s.t), k: o.k }); continue; }   // in overdrive: straight through it, in pieces
-          s.mode = 'crash'; s.crashT = K.CRASH_T; s.crashes++; s.crashK = o.k; s.v *= 0.5; s.vx = 0; s.duck = false; s.wall = false; s.air = false;
+          noteCrash(s); s.mode = 'crash'; s.crashT = K.CRASH_T; s.crashes++; s.crashK = o.k; s.v *= 0.5; s.vx = 0; s.duck = false; s.wall = false; s.air = false;
           ev.push({ type: 'crash', z: s.z, x: s.x, k: o.k });
           return ev;
         }
