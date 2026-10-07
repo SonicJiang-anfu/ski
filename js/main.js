@@ -15,7 +15,7 @@
   const store = (() => { try { return window.localStorage; } catch (e) { return null; } })();
 
   // ------------------------------------------------------------ sizing
-  let quality = 1, bs = 1;
+  let quality = 1, bs = 1, booted = false;
   function resize() {
     const vw = window.innerWidth, vh = window.innerHeight;
     D.P = params.has('portrait') || (!params.has('landscape') && vh > vw);
@@ -25,9 +25,11 @@
     D.small = s < 0.5;                                           // (a phone: its small type made bigger, js/draw.js)
     canvas.style.width = Math.floor(D.W * s) + 'px'; canvas.style.height = Math.floor(D.H * s) + 'px';
     bs = Math.min(1, s * Math.min(window.devicePixelRatio || 1, 2)) * quality;
-    canvas.width = Math.round(D.W * bs); canvas.height = Math.round(D.H * bs);
+    const cw = Math.round(D.W * bs), ch = Math.round(D.H * bs);   // (setting a canvas's size clears it, even to the size it already is: only when it changes)
+    if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; return true; }
+    return false;
   }
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', () => { if (resize() && booted) render(); });   // (a phone's address bar sliding, turning it round: drawn again at once, never left blank until the next frame)
   resize();
 
   const input = SkiInput.create(canvas, D, () => (G.mode === 'play' || G.mode === 'count' || G.mode === 'resume') && input.touch ? HUD.layout().pads : []);
@@ -420,13 +422,14 @@
   function frame(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     update(dt);
-    const t0 = performance.now(); render(); const cost = performance.now() - t0;
-    costAvg += (cost - costAvg) * 0.05; costT += dt;
-    if (costT > 2 && !params.has('q')) {                          // keep the frame cheap: lower or raise the backing resolution
-      costT = 0;
+    costT += dt;
+    if (costT > 2 && !params.has('q')) {                          // keep the frame cheap: lower or raise the backing resolution. Before drawing:
+      costT = 0;                                                  // resizing clears the canvas, and cleared after drawing it would show the page through it for a frame (a flash, on phones, slow enough to change it)
       if (costAvg > 13 && quality > 0.5) { quality = Math.max(0.5, quality * 0.85); resize(); }
       else if (costAvg < 6 && quality < 1) { quality = Math.min(1, quality * 1.1); resize(); }
     }
+    const t0 = performance.now(); render(); const cost = performance.now() - t0;
+    costAvg += (cost - costAvg) * 0.05;
     requestAnimationFrame(frame);
   }
   if (params.has('q')) { quality = clamp(+params.get('q'), 0.3, 1); resize(); }
@@ -459,6 +462,6 @@
   }
   // screenshot / test hook: ?shot freezes the loop; tools/shot.js drives frames itself
   window.__ski = { G, update, render, input, frames(n, dt = 1 / 60) { for (let i = 0; i < n; i++) update(dt); render(); } };
-  boot().then(() => { if (!params.has('shot')) requestAnimationFrame(t => { last = t; frame(t); }); else render(); });
+  boot().then(() => { booted = true; if (!params.has('shot')) requestAnimationFrame(t => { last = t; frame(t); }); else render(); });
   requestAnimationFrame(function first() { if (G.mode === 'loading') { ctx.setTransform(bs, 0, 0, bs, 0, 0); HUD.loading(G.loadP || 0); requestAnimationFrame(first); } });
 })();
